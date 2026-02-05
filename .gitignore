@@ -1,37 +1,73 @@
-HELP.md
-.gradle
-build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
+############################################
+# Common / OS
+############################################
+.DS_Store
+Thumbs.db
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
-
-### IntelliJ IDEA ###
-.idea
+############################################
+# IntelliJ IDEA / JetBrains
+############################################
+.idea/
 *.iws
 *.iml
 *.ipr
 out/
+
+############################################
+# VS Code
+############################################
+.vscode/
+
+############################################
+# Eclipse / STS
+############################################
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+bin/
+
+############################################
+# Gradle (Spring Boot backend)
+############################################
+**/.gradle/
+**/build/
+
+# Keep Gradle wrapper jar
+!backend/gradle/wrapper/gradle-wrapper.jar
+
+# (Optional) allow build/ under src for some cases (rare, but keep if you want)
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# (Optional) allow bin/ under src for some cases
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+# (Optional) allow out/ under src for some cases
 !**/src/main/**/out/
 !**/src/test/**/out/
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
+############################################
+# Node / React frontend
+############################################
+**/node_modules/
+**/dist/
+**/.vite/
+**/.cache/
+**/.eslintcache
+**/coverage/
 
-### VS Code ###
-.vscode/
+############################################
+# Environment files (DO NOT COMMIT)
+############################################
+.env
+.env.*
+*.env
+
+# Spring local configs (optional)
+**/application-local.yml
+**/application-local.yaml
