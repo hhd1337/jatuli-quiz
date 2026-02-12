@@ -5,9 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 public class JatuliQuizApplication {
-
-	public static void main(String[] args) {
-		SpringApplication.run(JatuliQuizApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(JatuliQuizApplication.class, args);
+    }
 }
