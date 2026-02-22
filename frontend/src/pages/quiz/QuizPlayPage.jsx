@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPracticeMock } from "../../mocks/practice.mock";
+import FabGroup from "../../features/fab/FabGroup";
 
 export default function QuizPlayPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const folderId = searchParams.get("folderId");
-  const mode = searchParams.get("mode"); // random/bookmark (Commit 7에서는 안내만)
+  const mode = searchParams.get("mode"); // random/bookmark
+
+  const [isMusicOn, setIsMusicOn] = useState(false);
+
+  // 북마크 토글을 위해 "problems"를 state로 들고 있어야 함
+  const [localProblems, setLocalProblems] = useState(() =>
+    folderId ? (getPracticeMock(folderId)?.problems ?? []) : []
+  );
 
   // folderId가 있으면 폴더 기반 문제풀이, 없으면 빈 상태(또는 mode 안내)
   const practice = useMemo(() => {
@@ -15,13 +23,17 @@ export default function QuizPlayPage() {
     return getPracticeMock(folderId);
   }, [folderId]);
 
-  const problems = practice?.problems ?? [];
+  const problems = localProblems;
+  
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
 
   // folderId가 바뀌면 상태 초기화
   useEffect(() => {
+  if (!folderId) return;
+    const p = getPracticeMock(folderId)?.problems ?? [];
+    setLocalProblems(p);
     setCurrentIndex(0);
     setShowAnswer(false);
   }, [folderId]);
@@ -74,11 +86,35 @@ export default function QuizPlayPage() {
     setShowAnswer(false);
   };
 
+  const toggleBookmark = () => {
+    const cur = problems[currentIndex];
+    if (!cur) return;
+
+    setLocalProblems((prev) =>
+      prev.map((p, idx) => {
+        if (idx !== currentIndex) return p;
+        return {
+          ...p,
+          meta: {
+            ...p.meta,
+            isBookmarked: !p.meta?.isBookmarked,
+          },
+        };
+      })
+    );
+  };
+
+  const goEdit = () => {
+    const cur = problems[currentIndex];
+    if (!cur) return;
+    navigate(`/quiz/${cur.problemId}/edit`);
+  };
+
   return (
     <div style={{ maxWidth: 800, margin: "0 auto" }}>
       {/* 상단 헤더 */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <h1 style={{ margin: 0 }}>{practice.titlePath}</h1>
+        <h1 style={{ margin: 0 }}>{practice?.titlePath ?? "문제풀이"}</h1>
         <div style={{ opacity: 0.7 }}>
           {currentIndex + 1} / {problems.length}
         </div>
@@ -129,6 +165,15 @@ export default function QuizPlayPage() {
           </div>
         </div>
       )}
+
+      <FabGroup
+        onEdit={goEdit}
+        onToggleBookmark={toggleBookmark}
+        isBookmarked={!!problem?.meta?.isBookmarked}
+        onHome={() => navigate("/")}
+        onToggleMusic={() => setIsMusicOn((v) => !v)}
+        isMusicOn={isMusicOn}
+      />
     </div>
   );
 }
