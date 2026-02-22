@@ -49,3 +49,15 @@ export function getPracticeMock(folderId) {
   }
   return data;
 }
+
+export function getProblemById(problemId) {
+  const id = Number(problemId);
+
+  for (const folderKey of Object.keys(practiceMockByFolderId)) {
+    const problems = practiceMockByFolderId[folderKey].problems;
+    const found = problems.find((p) => p.problemId === id);
+    if (found) return found;
+  }
+
+  return null;
+}
