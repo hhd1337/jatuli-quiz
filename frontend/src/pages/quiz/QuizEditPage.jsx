@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getProblemById } from "../../mocks/practice.mock";
+//import { getProblemById } from "../../mocks/practice.mock";
+import { getProblemById, updateProblem, deleteProblem } from "../../mocks/mockDb";
 
 export default function QuizEditPage() {
   const { quizId } = useParams();
@@ -27,15 +28,13 @@ export default function QuizEditPage() {
   }, [quizId]);
 
   const handleSave = () => {
-    console.log("=== 수정된 문제 ===");
-    console.log({
-      problemId: quizId,
-      questionText,
-      answerText,
-      explanationText,
+    updateProblem(quizId, {
+        questionText,
+        answerText,
+        explanationText,
     });
 
-    alert("저장(더미) 완료");
+    alert("저장 완료");
     navigate(-1);
   };
 
@@ -76,6 +75,17 @@ export default function QuizEditPage() {
       <div style={{ display: "flex", gap: 8 }}>
         <button onClick={handleSave}>저장</button>
         <button onClick={() => navigate(-1)}>취소</button>
+        <button
+            onClick={() => {
+                if (!confirm("정말 삭제할까요?")) return;
+                deleteProblem(quizId);
+                alert("삭제 완료");
+                navigate("/");
+            }}
+        >
+            삭제
+        </button>
+        
       </div>
     </div>
   );

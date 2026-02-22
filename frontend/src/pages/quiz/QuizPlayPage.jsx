@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getPracticeMock } from "../../mocks/practice.mock";
+//import { getPracticeMock } from "../../mocks/practice.mock";
+import { getProblemsByFolderId } from "../../mocks/mockDb";
 import FabGroup from "../../features/fab/FabGroup";
 
 export default function QuizPlayPage() {
-  const navigate = useNavigate();
+  const navigate = useNavigate(); 
   const [searchParams] = useSearchParams();
 
   const folderId = searchParams.get("folderId");
@@ -14,14 +15,8 @@ export default function QuizPlayPage() {
 
   // 북마크 토글을 위해 "problems"를 state로 들고 있어야 함
   const [localProblems, setLocalProblems] = useState(() =>
-    folderId ? (getPracticeMock(folderId)?.problems ?? []) : []
+    folderId ? getProblemsByFolderId(folderId) : []
   );
-
-  // folderId가 있으면 폴더 기반 문제풀이, 없으면 빈 상태(또는 mode 안내)
-  const practice = useMemo(() => {
-    if (!folderId) return null;
-    return getPracticeMock(folderId);
-  }, [folderId]);
 
   const problems = localProblems;
   
@@ -31,9 +26,8 @@ export default function QuizPlayPage() {
 
   // folderId가 바뀌면 상태 초기화
   useEffect(() => {
-  if (!folderId) return;
-    const p = getPracticeMock(folderId)?.problems ?? [];
-    setLocalProblems(p);
+    if (!folderId) return;
+    setLocalProblems(getProblemsByFolderId(folderId));
     setCurrentIndex(0);
     setShowAnswer(false);
   }, [folderId]);
@@ -64,7 +58,7 @@ export default function QuizPlayPage() {
   if (problems.length === 0) {
     return (
       <div style={{ maxWidth: 800, margin: "0 auto" }}>
-        <h1>{practice?.titlePath ?? "문제풀이"}</h1>
+        <h1 style={{ margin: 0 }}>폴더 {folderId}</h1>
         <p>이 폴더에는 문제가 없습니다.</p>
         <button onClick={() => navigate(-1)}>뒤로</button>
       </div>
@@ -114,7 +108,7 @@ export default function QuizPlayPage() {
     <div style={{ maxWidth: 800, margin: "0 auto" }}>
       {/* 상단 헤더 */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <h1 style={{ margin: 0 }}>{practice?.titlePath ?? "문제풀이"}</h1>
+        <h1 style={{ margin: 0 }}>폴더 {folderId}</h1>
         <div style={{ opacity: 0.7 }}>
           {currentIndex + 1} / {problems.length}
         </div>
