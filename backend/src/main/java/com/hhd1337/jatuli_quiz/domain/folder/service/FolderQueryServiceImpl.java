@@ -1,5 +1,7 @@
 package com.hhd1337.jatuli_quiz.domain.folder.service;
 
+import com.hhd1337.jatuli_quiz.common.exception.code.status.ErrorStatus;
+import com.hhd1337.jatuli_quiz.common.exception.handler.FolderHandler;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.FolderChildrenResponse;
 import com.hhd1337.jatuli_quiz.domain.folder.entity.Folder;
 import com.hhd1337.jatuli_quiz.domain.folder.repository.FolderRepository;
@@ -21,7 +23,7 @@ public class FolderQueryServiceImpl implements FolderQueryService {
     @Override
     public FolderChildrenResponse getChildren(Long folderId) {
         Folder currentFolder = folderRepository.findById(folderId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 폴더입니다. folderId=" + folderId));
+                .orElseThrow(() -> new FolderHandler(ErrorStatus.FOLDER_NOT_FOUND));
 
         List<FolderChildrenResponse.BreadcrumbDTO> breadcrumb = buildBreadcrumb(currentFolder);
 
