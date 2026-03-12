@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DailyStatRepository extends JpaRepository<DailyStat, Long> {
     Optional<DailyStat> findByStatDate(LocalDate statDate);
+    
+    Optional<DailyStat> findTopByStatDateLessThanOrderByStatDateDesc(LocalDate statDate);
 }

@@ -18,7 +18,10 @@ public enum ErrorStatus implements BaseErrorCode {
 
     // 폴더 관련 에러
     FOLDER_NOT_FOUND(HttpStatus.NOT_FOUND, "FOLDER4041", "존재하지 않는 폴더입니다."),
-    FOLDER_NOT_LEAF(HttpStatus.BAD_REQUEST, "FOLDER4001", "연습 문제 조회는 leaf 폴더에서만 가능합니다.");
+    FOLDER_NOT_LEAF(HttpStatus.BAD_REQUEST, "FOLDER4001", "연습 문제 조회는 leaf 폴더에서만 가능합니다."),
+
+    // 문제 관련 에러
+    PROBLEM_NOT_FOUND(HttpStatus.NOT_FOUND, "PROBLEM4041", "존재하지 않는 문제입니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
