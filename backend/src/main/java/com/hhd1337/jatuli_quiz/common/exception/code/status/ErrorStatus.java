@@ -17,7 +17,8 @@ public enum ErrorStatus implements BaseErrorCode {
     _FORBIDDEN(HttpStatus.FORBIDDEN, "COMMON403", "금지된 요청입니다."),
 
     // 폴더 관련 에러
-    FOLDER_NOT_FOUND(HttpStatus.NOT_FOUND, "FOLDER404", "존재하지 않는 폴더입니다.");
+    FOLDER_NOT_FOUND(HttpStatus.NOT_FOUND, "FOLDER4041", "존재하지 않는 폴더입니다."),
+    FOLDER_NOT_LEAF(HttpStatus.BAD_REQUEST, "FOLDER4001", "연습 문제 조회는 leaf 폴더에서만 가능합니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
