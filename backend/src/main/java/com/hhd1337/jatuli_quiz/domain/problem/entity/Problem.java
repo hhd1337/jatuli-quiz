@@ -75,4 +75,12 @@ public class Problem {
         }
         this.solvedCount += 1;
     }
+
+    public void toggleBookmark() {
+        if (this.isBookmarked == null) {
+            this.isBookmarked = true;
+            return;
+        }
+        this.isBookmarked = !this.isBookmarked;
+    }
 }
