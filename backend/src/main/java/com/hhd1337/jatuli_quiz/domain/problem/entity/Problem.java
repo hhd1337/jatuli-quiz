@@ -68,4 +68,11 @@ public class Problem {
         this.solvedCount = solvedCount;
         this.folder = folder;
     }
+
+    public void increaseSolvedCount() {
+        if (this.solvedCount == null) {
+            this.solvedCount = 0;
+        }
+        this.solvedCount += 1;
+    }
 }

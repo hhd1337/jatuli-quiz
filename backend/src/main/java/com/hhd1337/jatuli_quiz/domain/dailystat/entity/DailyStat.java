@@ -1,6 +1,11 @@
 package com.hhd1337.jatuli_quiz.domain.dailystat.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -44,5 +49,36 @@ public class DailyStat {
         this.focusSeconds = focusSeconds;
         this.accumulatedFocusSeconds = accumulatedFocusSeconds;
         this.daysInARow = daysInARow;
+    }
+
+    public static DailyStat createFirstSubmissionOfDay(
+            LocalDate statDate,
+            int elapsedSeconds,
+            long previousAccumulatedFocusSeconds,
+            int daysInARow
+    ) {
+        return new DailyStat(
+                statDate,
+                1,
+                elapsedSeconds,
+                previousAccumulatedFocusSeconds + elapsedSeconds,
+                daysInARow
+        );
+    }
+
+    public void applySubmission(int elapsedSeconds) {
+        if (this.solvedCount == null) {
+            this.solvedCount = 0;
+        }
+        if (this.focusSeconds == null) {
+            this.focusSeconds = 0;
+        }
+        if (this.accumulatedFocusSeconds == null) {
+            this.accumulatedFocusSeconds = 0L;
+        }
+
+        this.solvedCount += 1;
+        this.focusSeconds += elapsedSeconds;
+        this.accumulatedFocusSeconds += elapsedSeconds;
     }
 }
