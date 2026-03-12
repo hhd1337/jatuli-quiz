@@ -29,4 +29,18 @@ public class PracticeRestController {
     public ApiResponse<PracticeResponse.GetPracticeProblemsResponse> getBookmarkedPracticeProblems() {
         return ApiResponse.onSuccess(practiceQueryService.getBookmarkedPracticeProblems());
     }
+
+    @Operation(
+            summary = "랜덤 연습 세트 조회",
+            description = """
+                    전체 문제 중 랜덤으로 연습 세트를 반환합니다.
+                    현재 MVP에서는 요청 바디 없이 기본 10문제를 랜덤으로 선택하며, 중복 없이 반환합니다.
+                    전체 문제가 10개보다 적으면 존재하는 문제만 반환합니다.
+                    응답 형식은 북마크 연습과 동일하게 selectionRule, problems 배열을 사용합니다.
+                    """
+    )
+    @PostMapping("/random")
+    public ApiResponse<PracticeResponse.GetPracticeProblemsResponse> getRandomPracticeProblems() {
+        return ApiResponse.onSuccess(practiceQueryService.getRandomPracticeProblems());
+    }
 }
