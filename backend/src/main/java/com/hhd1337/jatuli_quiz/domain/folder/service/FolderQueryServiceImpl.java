@@ -1,10 +1,15 @@
 package com.hhd1337.jatuli_quiz.domain.folder.service;
 
+import com.hhd1337.jatuli_quiz.common.exception.GeneralException;
 import com.hhd1337.jatuli_quiz.common.exception.code.status.ErrorStatus;
 import com.hhd1337.jatuli_quiz.common.exception.handler.FolderHandler;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.FolderChildrenResponse;
+import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.PracticeProblemDto;
+import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.PracticeProblemMetaDto;
+import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.PracticeResponse;
 import com.hhd1337.jatuli_quiz.domain.folder.entity.Folder;
 import com.hhd1337.jatuli_quiz.domain.folder.repository.FolderRepository;
+import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
 import com.hhd1337.jatuli_quiz.domain.problem.repository.ProblemRepository;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class FolderQueryServiceImpl implements FolderQueryService {
+
+    private static final String SELECTION_RULE_ALL = "ALL";
 
     private final FolderRepository folderRepository;
     private final ProblemRepository problemRepository;
@@ -66,6 +73,44 @@ public class FolderQueryServiceImpl implements FolderQueryService {
                 .solved(solved)
                 .total(total)
                 .hasChildren(hasChildren)
+                .build();
+    }
+
+    @Override
+    public PracticeResponse getPracticeProblems(Long folderId) {
+        Folder folder = folderRepository.findByFolderId(folderId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.FOLDER_NOT_FOUND));
+
+        boolean hasChildren = folderRepository.existsByParentFolder_FolderId(folderId);
+        if (hasChildren) {
+            throw new GeneralException(ErrorStatus.FOLDER_NOT_LEAF);
+        }
+
+        List<Problem> problems = problemRepository.findAllByFolder_FolderIdOrderByProblemNumAsc(folderId);
+
+        List<PracticeProblemDto> problemDtos = problems.stream()
+                .map(this::toPracticeProblemDto)
+                .toList();
+
+        return PracticeResponse.builder()
+                .selectionRule(SELECTION_RULE_ALL)
+                .problems(problemDtos)
+                .build();
+    }
+
+    private PracticeProblemDto toPracticeProblemDto(Problem problem) {
+        return PracticeProblemDto.builder()
+                .problemId(problem.getProblemId())
+                .problemNum(problem.getProblemNum())
+                .question(problem.getQuestionText())
+                .answer(problem.getAnswerText())
+                .explanation(problem.getExplanationText())
+                .meta(
+                        PracticeProblemMetaDto.builder()
+                                .attemptCount(problem.getSolvedCount())
+                                .isBookmarked(problem.getIsBookmarked())
+                                .build()
+                )
                 .build();
     }
 }
