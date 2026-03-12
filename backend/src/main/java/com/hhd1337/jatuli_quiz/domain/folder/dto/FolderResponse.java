@@ -37,4 +37,32 @@ public class FolderResponse {
             private Boolean hasChildren;
         }
     }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class PracticeResponse {
+        private String selectionRule;
+        private List<PracticeProblemDto> problems;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class PracticeProblemDto {
+        private Long problemId;
+        private Integer problemNum;
+        private String question;
+        private String answer;
+        private String explanation;
+        private PracticeProblemMetaDto meta;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class PracticeProblemMetaDto {
+        private Integer attemptCount;
+        private Boolean isBookmarked;
+    }
 }
