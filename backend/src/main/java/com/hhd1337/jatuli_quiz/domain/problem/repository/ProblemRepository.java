@@ -23,9 +23,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
                   and p.solvedCount > 0
             """)
     Integer countSolvedProblemsByFolderId(Long folderId);
-
-    List<Problem> findAllByIsBookmarkedTrueOrderBySolvedCountAscProblemIdAsc();
-
+    
     @Query("""
             select p
             from Problem p
