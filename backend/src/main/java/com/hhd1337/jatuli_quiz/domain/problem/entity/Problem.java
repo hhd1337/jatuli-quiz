@@ -69,6 +69,24 @@ public class Problem {
         this.folder = folder;
     }
 
+    public static Problem of(
+            Integer problemNum,
+            String questionText,
+            String explanationText,
+            String answerText,
+            Folder folder
+    ) {
+        return new Problem(
+                problemNum,
+                questionText,
+                explanationText,
+                answerText,
+                false,
+                0,
+                folder
+        );
+    }
+
     public void increaseSolvedCount() {
         if (this.solvedCount == null) {
             this.solvedCount = 0;

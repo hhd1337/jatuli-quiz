@@ -3,6 +3,7 @@ package com.hhd1337.jatuli_quiz.domain.problem.repository;
 import com.hhd1337.jatuli_quiz.domain.folder.entity.Folder;
 import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -23,7 +24,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
                   and p.solvedCount > 0
             """)
     Integer countSolvedProblemsByFolderId(Long folderId);
-    
+
     @Query("""
             select p
             from Problem p
@@ -31,4 +32,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
             order by coalesce(p.solvedCount, 0) asc, p.problemId asc
             """)
     List<Problem> findBookmarkedProblemsOrderByAttemptCountAsc();
+
+    Optional<Problem> findTopByFolder_FolderIdOrderByProblemNumDesc(Long folderId);
+
 }
