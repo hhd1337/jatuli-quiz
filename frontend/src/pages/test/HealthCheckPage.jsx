@@ -16,7 +16,7 @@ export default function HealthCheckPage() {
             setResult(String(data));
         } catch (err) {
             console.error(err);
-            setError("health API 호출에 실패했습니다.");
+            setError("health API 호출에 실패했습니다. 브라우저 콘솔과 Network 탭을 확인해주세요.");
         } finally {
             setLoading(false);
         }
@@ -26,6 +26,7 @@ export default function HealthCheckPage() {
         <div style={{ maxWidth: 800, margin: "0 auto", padding: 24 }}>
             <h1>백엔드 Health 체크 테스트</h1>
             <p>프론트 → 백엔드 연동이 정상인지 확인하는 임시 테스트 페이지입니다.</p>
+            <p>현재 API 주소: {import.meta.env.VITE_API_BASE_URL}</p>
 
             <button onClick={handleHealthCheck} disabled={loading}>
                 {loading ? "확인 중..." : "health API 호출"}
