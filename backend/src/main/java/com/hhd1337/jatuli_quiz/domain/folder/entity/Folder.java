@@ -53,4 +53,11 @@ public class Folder {
         this.problemCount = problemCount;
         this.parentFolder = parentFolder;
     }
+
+    public void increaseProblemCount(int count) {
+        if (this.problemCount == null) {
+            this.problemCount = 0;
+        }
+        this.problemCount += count;
+    }
 }
