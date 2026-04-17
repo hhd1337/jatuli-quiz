@@ -68,14 +68,18 @@ export default function HomePage() {
                     borderRadius: 12,
                     padding: 16,
                     marginBottom: 24,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
                 }}
             >
-                <div>⏳ 자투리 시간 저축 {summary.savedTimeMinutes}분</div>
+                <div>⏳ 누적 자투리시간 저축: {summary.accumulatedFocusTimeText}</div>
+                <div>📚 누적 푼 문제 수: {summary.solvedCountTotal}문제</div>
+                <div>🕒 오늘 자투리 시간 저축: {summary.todayFocusTimeText}</div>
+                <div>✅ 오늘 푼 문제 수: {summary.todaySolvedCount}문제</div>
                 <div>🌱 Level {summary.level} ({summary.solvedCountTotal}문제 해결)</div>
                 <div>🔥 {summary.streakDays}일 연속 도전 중</div>
-                <div style={{ marginTop: 8 }}>
-                    🎯 오늘 목표 {summary.todayGoal.solvedCount}/{summary.todayGoal.goalCount}
-                </div>
+                <div>🎯 오늘 목표 {summary.todayGoal.solvedCount}/{summary.todayGoal.goalCount}</div>
             </div>
 
             {/* ================== 폴더 리스트 ================== */}
