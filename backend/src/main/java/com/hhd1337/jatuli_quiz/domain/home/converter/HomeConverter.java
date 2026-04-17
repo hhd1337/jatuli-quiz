@@ -2,6 +2,7 @@ package com.hhd1337.jatuli_quiz.domain.home.converter;
 
 import com.hhd1337.jatuli_quiz.domain.folder.entity.Folder;
 import com.hhd1337.jatuli_quiz.domain.home.dto.HomeResponse;
+import java.util.List;
 
 public class HomeConverter {
 
@@ -9,14 +10,14 @@ public class HomeConverter {
     }
 
     public static HomeResponse.AchievementCard toAchievementCard(
-            Integer todayFocusSeconds,
-            Long accumulatedFocusSeconds,
-            Integer todaySolvedCount,
-            Integer totalSolvedCount,
-            Integer daysInARow,
-            Integer level,
-            Integer todayGoalCount,
-            Integer todayGoalSolvedCount
+            int todayFocusSeconds,
+            long accumulatedFocusSeconds,
+            int todaySolvedCount,
+            int totalSolvedCount,
+            int daysInARow,
+            int level,
+            int todayGoalCount,
+            int todayGoalSolvedCount
     ) {
         return HomeResponse.AchievementCard.builder()
                 .todayFocusSeconds(todayFocusSeconds)
@@ -32,19 +33,20 @@ public class HomeConverter {
 
     public static HomeResponse.RootFolderItem toRootFolderItem(
             Folder folder,
-            Integer solvedProblemCount
+            int solvedProblemCount,
+            int totalProblemCount
     ) {
         return HomeResponse.RootFolderItem.builder()
                 .folderId(folder.getFolderId())
                 .name(folder.getName())
                 .solvedProblemCount(solvedProblemCount)
-                .totalProblemCount(folder.getProblemCount() == null ? 0 : folder.getProblemCount())
+                .totalProblemCount(totalProblemCount)
                 .build();
     }
 
     public static HomeResponse.GetHomeResponse toGetHomeResponse(
             HomeResponse.AchievementCard achievementCard,
-            java.util.List<HomeResponse.RootFolderItem> rootFolders
+            List<HomeResponse.RootFolderItem> rootFolders
     ) {
         return HomeResponse.GetHomeResponse.builder()
                 .achievementCard(achievementCard)
