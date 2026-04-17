@@ -29,8 +29,17 @@ export default function FolderBrowserPage() {
     }, [folderId]);
 
     const handleChildClick = (child) => {
+        if (!folderData) return;
+
+        const childTitlePath = `${folderData.titlePath}/${child.name}`.replace(/\/+/g, "/");
+
         if (child.isLeaf) {
-            navigate(`/quiz/play?folderId=${child.folderId}`);
+            navigate(`/quiz/play?folderId=${child.folderId}`, {
+                state: {
+                    titlePath: childTitlePath,
+                    parentFolderId: folderId,
+                },
+            });
             return;
         }
 
