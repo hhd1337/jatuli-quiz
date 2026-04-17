@@ -6,9 +6,11 @@ import com.hhd1337.jatuli_quiz.domain.home.service.HomeQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequestMapping("/api/v1/home")
 @RequiredArgsConstructor
 public class HomeRestController {
 
@@ -23,7 +25,7 @@ public class HomeRestController {
                     루트 폴더 목록에는 ROOT 폴더의 직계 하위 폴더들과 각 폴더의 solved/total 문제가 포함됩니다.
                     """
     )
-    @GetMapping("/home")
+    @GetMapping
     public ApiResponse<HomeResponse.GetHomeResponse> getHome() {
         return ApiResponse.onSuccess(homeQueryService.getHome());
     }

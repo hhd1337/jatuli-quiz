@@ -68,16 +68,35 @@ public class HomeQueryServiceImpl implements HomeQueryService {
         List<Folder> rootFolders = folderRepository.findAllByParentFolder_FolderIdOrderByFolderIdAsc(ROOT_FOLDER_ID);
 
         List<HomeResponse.RootFolderItem> rootFolderItems = rootFolders.stream()
-                .map(folder -> {
-                    Integer solvedProblemCount = problemRepository.countSolvedProblemsByFolderId(folder.getFolderId());
-                    if (solvedProblemCount == null) {
-                        solvedProblemCount = 0;
-                    }
-                    return HomeConverter.toRootFolderItem(folder, solvedProblemCount);
-                })
+                .map(this::toRootFolderItem)
                 .toList();
 
         return HomeConverter.toGetHomeResponse(achievementCard, rootFolderItems);
+    }
+
+    private HomeResponse.RootFolderItem toRootFolderItem(Folder folder) {
+        FolderStats stats = calculateFolderStats(folder);
+
+        return HomeConverter.toRootFolderItem(
+                folder,
+                stats.solved(),
+                stats.total()
+        );
+    }
+
+    private FolderStats calculateFolderStats(Folder folder) {
+        int total = problemRepository.countByFolder(folder);
+        int solved = problemRepository.countByFolderAndSolvedCountGreaterThan(folder, 0);
+
+        List<Folder> children = folderRepository.findAllByParentFolder_FolderIdOrderByFolderIdAsc(folder.getFolderId());
+
+        for (Folder child : children) {
+            FolderStats childStats = calculateFolderStats(child);
+            total += childStats.total();
+            solved += childStats.solved();
+        }
+
+        return new FolderStats(total, solved);
     }
 
     private int calculateLevel(int totalSolvedCount) {
@@ -94,5 +113,8 @@ public class HomeQueryServiceImpl implements HomeQueryService {
             return 2;
         }
         return 1;
+    }
+
+    private record FolderStats(int total, int solved) {
     }
 }
