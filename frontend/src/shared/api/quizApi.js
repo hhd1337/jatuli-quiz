@@ -1,4 +1,4 @@
-import { apiClient } from "../../../shared/api/client";
+import { apiClient } from "./client.js";
 
 export async function getHealth() {
     const response = await apiClient.get("/health");
