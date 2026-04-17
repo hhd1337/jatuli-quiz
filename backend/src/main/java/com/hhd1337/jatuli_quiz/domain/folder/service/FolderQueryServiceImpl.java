@@ -3,9 +3,9 @@ package com.hhd1337.jatuli_quiz.domain.folder.service;
 import com.hhd1337.jatuli_quiz.common.exception.GeneralException;
 import com.hhd1337.jatuli_quiz.common.exception.code.status.ErrorStatus;
 import com.hhd1337.jatuli_quiz.common.exception.handler.FolderHandler;
+import com.hhd1337.jatuli_quiz.domain.folder.converter.FolderConverter;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.FolderChildrenResponse;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.PracticeProblemDto;
-import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.PracticeProblemMetaDto;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.PracticeResponse;
 import com.hhd1337.jatuli_quiz.domain.folder.entity.Folder;
 import com.hhd1337.jatuli_quiz.domain.folder.repository.FolderRepository;
@@ -40,10 +40,7 @@ public class FolderQueryServiceImpl implements FolderQueryService {
                 .map(this::toFolderDTO)
                 .toList();
 
-        return FolderChildrenResponse.builder()
-                .breadcrumb(breadcrumb)
-                .folders(folders)
-                .build();
+        return FolderConverter.toFolderChildrenResponse(breadcrumb, folders);
     }
 
     private List<FolderChildrenResponse.BreadcrumbDTO> buildBreadcrumb(Folder currentFolder) {
@@ -51,11 +48,7 @@ public class FolderQueryServiceImpl implements FolderQueryService {
 
         Folder cursor = currentFolder;
         while (cursor != null) {
-            breadcrumb.add(0, FolderChildrenResponse.BreadcrumbDTO.builder()
-                    .folderId(cursor.getFolderId())
-                    .name(cursor.getName())
-                    .build());
-
+            breadcrumb.add(0, FolderConverter.toBreadcrumbDTO(cursor));
             cursor = cursor.getParentFolder();
         }
 
@@ -63,17 +56,30 @@ public class FolderQueryServiceImpl implements FolderQueryService {
     }
 
     private FolderChildrenResponse.FolderDTO toFolderDTO(Folder folder) {
+        boolean hasChildren = folderRepository.existsByParentFolder(folder);
+        FolderStats stats = calculateFolderStats(folder);
+
+        return FolderConverter.toFolderDTO(
+                folder,
+                stats.solved(),
+                stats.total(),
+                hasChildren
+        );
+    }
+
+    private FolderStats calculateFolderStats(Folder folder) {
         int total = problemRepository.countByFolder(folder);
         int solved = problemRepository.countByFolderAndSolvedCountGreaterThan(folder, 0);
-        boolean hasChildren = folderRepository.existsByParentFolder(folder);
 
-        return FolderChildrenResponse.FolderDTO.builder()
-                .folderId(folder.getFolderId())
-                .name(folder.getName())
-                .solved(solved)
-                .total(total)
-                .hasChildren(hasChildren)
-                .build();
+        List<Folder> children = folderRepository.findByParentFolder_FolderIdOrderByFolderIdAsc(folder.getFolderId());
+
+        for (Folder child : children) {
+            FolderStats childStats = calculateFolderStats(child);
+            total += childStats.total();
+            solved += childStats.solved();
+        }
+
+        return new FolderStats(total, solved);
     }
 
     @Override
@@ -89,28 +95,12 @@ public class FolderQueryServiceImpl implements FolderQueryService {
         List<Problem> problems = problemRepository.findAllByFolder_FolderIdOrderByProblemNumAsc(folderId);
 
         List<PracticeProblemDto> problemDtos = problems.stream()
-                .map(this::toPracticeProblemDto)
+                .map(FolderConverter::toPracticeProblemDto)
                 .toList();
 
-        return PracticeResponse.builder()
-                .selectionRule(SELECTION_RULE_ALL)
-                .problems(problemDtos)
-                .build();
+        return FolderConverter.toPracticeResponse(SELECTION_RULE_ALL, problemDtos);
     }
 
-    private PracticeProblemDto toPracticeProblemDto(Problem problem) {
-        return PracticeProblemDto.builder()
-                .problemId(problem.getProblemId())
-                .problemNum(problem.getProblemNum())
-                .question(problem.getQuestionText())
-                .answer(problem.getAnswerText())
-                .explanation(problem.getExplanationText())
-                .meta(
-                        PracticeProblemMetaDto.builder()
-                                .attemptCount(problem.getSolvedCount())
-                                .isBookmarked(problem.getIsBookmarked())
-                                .build()
-                )
-                .build();
+    private record FolderStats(int total, int solved) {
     }
 }
