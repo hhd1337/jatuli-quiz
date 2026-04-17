@@ -8,7 +8,7 @@ export default function QuizPlayPage() {
     const [searchParams] = useSearchParams();
 
     const folderId = searchParams.get("folderId");
-    const mode = searchParams.get("mode"); // random/bookmark
+    const mode = searchParams.get("mode");
 
     const [isMusicOn, setIsMusicOn] = useState(false);
     const [localProblems, setLocalProblems] = useState([]);
@@ -16,10 +16,10 @@ export default function QuizPlayPage() {
     const [error, setError] = useState("");
     const [titlePath, setTitlePath] = useState("");
 
-    const problems = localProblems;
-
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
+
+    const problems = localProblems;
 
     useEffect(() => {
         async function fetchPracticeProblems() {
@@ -51,14 +51,14 @@ export default function QuizPlayPage() {
         return (
             <div style={{ maxWidth: 800, margin: "0 auto" }}>
                 <h1>QuizPlayPage</h1>
-                <p>folderId가 없습니다. 폴더에서 들어오거나 URL에 folderId를 붙여주세요.</p>
+                <p>folderId가 없습니다. leaf 폴더에서 진입해주세요.</p>
                 <p style={{ opacity: 0.7 }}>
-                    예: <code>/quiz/play?folderId=101</code>
+                    예: <code>/quiz/play?folderId=9</code>
                 </p>
 
                 {mode && (
                     <p style={{ opacity: 0.7 }}>
-                        mode=<code>{mode}</code> 는 아직 연결 전입니다.
+                        mode=<code>{mode}</code> 는 아직 별도 연동 전입니다.
                     </p>
                 )}
 
@@ -100,22 +100,22 @@ export default function QuizPlayPage() {
 
     const goNext = () => {
         const next = currentIndex + 1;
+
         if (next >= problems.length) {
             setCurrentIndex(0);
             setShowAnswer(false);
             return;
         }
+
         setCurrentIndex(next);
         setShowAnswer(false);
     };
 
     const toggleBookmark = () => {
-        const cur = problems[currentIndex];
-        if (!cur) return;
-
         setLocalProblems((prev) =>
             prev.map((p, idx) => {
                 if (idx !== currentIndex) return p;
+
                 return {
                     ...p,
                     meta: {
@@ -128,9 +128,8 @@ export default function QuizPlayPage() {
     };
 
     const goEdit = () => {
-        const cur = problems[currentIndex];
-        if (!cur) return;
-        navigate(`/quiz/${cur.problemId}/edit`);
+        if (!problem?.problemId) return;
+        navigate(`/quiz/${problem.problemId}/edit`);
     };
 
     return (
@@ -151,8 +150,12 @@ export default function QuizPlayPage() {
             <hr style={{ margin: "16px 0" }} />
 
             <div style={{ marginBottom: 16 }}>
-                <div style={{ opacity: 0.7, marginBottom: 6 }}>Q{problem.questionNo}</div>
-                <div style={{ fontSize: 18, fontWeight: 600 }}>{problem.questionText}</div>
+                <div style={{ opacity: 0.7, marginBottom: 6 }}>
+                    Q{problem.questionNo}
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 600 }}>
+                    {problem.questionText}
+                </div>
             </div>
 
             {problem.questionImages?.length > 0 && (
@@ -203,7 +206,9 @@ export default function QuizPlayPage() {
 }
 
 function ExplanationBlocks({ blocks }) {
-    if (!blocks.length) return <div style={{ opacity: 0.6 }}>해설이 없습니다.</div>;
+    if (!blocks.length) {
+        return <div style={{ opacity: 0.6 }}>해설이 없습니다.</div>;
+    }
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
