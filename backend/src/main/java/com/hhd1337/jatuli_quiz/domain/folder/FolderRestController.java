@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/folders")
+@RequestMapping("/api/v1/folders")
 @RequiredArgsConstructor
 public class FolderRestController {
     private final FolderQueryService folderQueryService;
