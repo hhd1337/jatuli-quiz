@@ -69,10 +69,4 @@ public class ProblemRestController {
 
         return ApiResponse.onSuccess(problemCommandService.importProblemsFromText(request));
     }
-//    @PostMapping("/import/text")
-//    public ApiResponse<ProblemImportResponse.ImportProblemsFromTextResponse> importProblemsFromText(
-//            @Valid @RequestBody ProblemImportRequest.ImportProblemsFromTextRequest request
-//    ) {
-//        return ApiResponse.onSuccess(problemCommandService.importProblemsFromText(request));
-//    }
 }
