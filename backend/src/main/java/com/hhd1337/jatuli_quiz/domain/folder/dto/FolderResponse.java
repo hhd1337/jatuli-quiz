@@ -65,4 +65,17 @@ public class FolderResponse {
         private Integer attemptCount;
         private Boolean isBookmarked;
     }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CreateFolderResponse {
+        private Long folderId;
+        private Long parentFolderId;
+        private String name;
+        private String fullPath;
+        private Integer depth;
+        private Integer problemCount;
+    }
 }

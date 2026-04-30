@@ -54,6 +54,26 @@ public class Folder {
         this.parentFolder = parentFolder;
     }
 
+    public static Folder createChildFolder(String name, Folder parentFolder) {
+        return new Folder(
+                buildFullPath(parentFolder, name),
+                parentFolder.getDepth() + 1,
+                name,
+                0,
+                parentFolder
+        );
+    }
+
+    private static String buildFullPath(Folder parentFolder, String name) {
+        String parentFullPath = parentFolder.getFullPath();
+
+        if (parentFullPath == null || parentFullPath.isBlank() || parentFullPath.equals("/")) {
+            return "/" + name;
+        }
+
+        return parentFullPath + "/" + name;
+    }
+
     public void increaseProblemCount(int count) {
         if (this.problemCount == null) {
             this.problemCount = 0;
