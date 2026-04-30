@@ -43,6 +43,8 @@ public class ProblemCommandServiceImpl implements ProblemCommandService {
         Folder folder = folderRepository.findById(request.getFolderId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.FOLDER_NOT_FOUND));
 
+        validateLeafFolderForProblemImport(folder);
+
         List<ParsedProblemContent> parsedProblems = problemTextParser.parse(request.getRawText());
 
         int startProblemNum = getNextProblemNum(folder.getFolderId());
@@ -71,5 +73,13 @@ public class ProblemCommandServiceImpl implements ProblemCommandService {
         return problemRepository.findTopByFolder_FolderIdOrderByProblemNumDesc(folderId)
                 .map(problem -> problem.getProblemNum() + 1)
                 .orElse(1);
+    }
+
+    private void validateLeafFolderForProblemImport(Folder folder) {
+        boolean hasChildFolders = folderRepository.existsByParentFolder_FolderId(folder.getFolderId());
+
+        if (hasChildFolders) {
+            throw new GeneralException(ErrorStatus.PROBLEM_IMPORT_TARGET_NOT_LEAF);
+        }
     }
 }
