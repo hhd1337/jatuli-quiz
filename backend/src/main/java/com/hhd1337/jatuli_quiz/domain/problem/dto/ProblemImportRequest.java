@@ -5,16 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 public class ProblemImportRequest {
-    //    @Getter
-//    @NoArgsConstructor
-//    public static class ImportProblemsFromTextRequest {
-//
-//        @NotNull
-//        private Long folderId;
-//
-//        @NotBlank
-//        private String rawText;
-//    }
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor

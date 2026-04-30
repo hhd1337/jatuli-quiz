@@ -81,7 +81,7 @@ public class Problem {
                 questionText,
                 explanationText,
                 answerText,
-                false,
+                true,
                 0,
                 folder
         );
