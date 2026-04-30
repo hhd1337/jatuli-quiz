@@ -1,13 +1,19 @@
 package com.hhd1337.jatuli_quiz.domain.folder;
 
 import com.hhd1337.jatuli_quiz.common.response.ApiResponse;
+import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderRequest;
+import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.FolderChildrenResponse;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.PracticeResponse;
+import com.hhd1337.jatuli_quiz.domain.folder.service.FolderCommandService;
 import com.hhd1337.jatuli_quiz.domain.folder.service.FolderQueryService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class FolderRestController {
     private final FolderQueryService folderQueryService;
+    private final FolderCommandService folderCommandService;
 
     @Operation(
             summary = "폴더 하위 목록 조회",
@@ -42,5 +49,25 @@ public class FolderRestController {
     @GetMapping("/{folderId}/practice")
     public ApiResponse<PracticeResponse> getPracticeProblems(@PathVariable Long folderId) {
         return ApiResponse.onSuccess(folderQueryService.getPracticeProblems(folderId));
+    }
+
+    @Operation(
+            summary = "폴더 추가",
+            description = """
+                    특정 부모 폴더 아래에 새로운 하위 폴더를 생성합니다.
+                    
+                    홈 화면에서 바로 보이는 폴더들(예: 자바, 스프링, JPA, DB, 도커)은
+                    루트 폴더의 바로 아래 자식 폴더입니다.
+                    따라서 해당 폴더들을 생성하려면 parentFolderId로 루트 폴더 ID인 1을 전달합니다.
+                    
+                    부모 폴더가 존재하지 않으면 폴더 생성을 차단합니다.
+                    같은 부모 폴더 아래에 동일한 이름의 자식 폴더가 이미 존재하는 경우에도 폴더 생성을 차단합니다.
+                    """
+    )
+    @PostMapping
+    public ApiResponse<FolderResponse.CreateFolderResponse> createFolder(
+            @Valid @RequestBody FolderRequest.CreateFolderRequest request
+    ) {
+        return ApiResponse.onSuccess(folderCommandService.createFolder(request));
     }
 }

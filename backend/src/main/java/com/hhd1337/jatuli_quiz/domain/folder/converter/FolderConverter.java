@@ -1,5 +1,6 @@
 package com.hhd1337.jatuli_quiz.domain.folder.converter;
 
+import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.FolderChildrenResponse;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.PracticeProblemDto;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.PracticeProblemMetaDto;
@@ -70,6 +71,17 @@ public class FolderConverter {
         return PracticeProblemMetaDto.builder()
                 .attemptCount(problem.getSolvedCount())
                 .isBookmarked(problem.getIsBookmarked())
+                .build();
+    }
+
+    public static FolderResponse.CreateFolderResponse toCreateFolderResponse(Folder folder) {
+        return FolderResponse.CreateFolderResponse.builder()
+                .folderId(folder.getFolderId())
+                .parentFolderId(folder.getParentFolder().getFolderId())
+                .name(folder.getName())
+                .fullPath(folder.getFullPath())
+                .depth(folder.getDepth())
+                .problemCount(folder.getProblemCount())
                 .build();
     }
 }
