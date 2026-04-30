@@ -2,7 +2,7 @@
 name: "✨ Feature request"
 about: 새로운 기능 추가 또는 기존 기능 확장을 위한 이슈.
 title: 'feat(scope): 작업 요약'
-labels: 'type: feat'
+labels: 'type: feat, type: fix'
 assignees: hhd1337
 
 ---
