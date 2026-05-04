@@ -96,7 +96,7 @@ public class ProblemCommandServiceImpl implements ProblemCommandService {
     public PracticeResponse.GetBookmarkedPracticeProblemsResponse getBookmarkedPracticeProblems(
             PracticeRequest.GetBookmarkedPracticeProblemsRequest request
     ) {
-        int size = normalizePracticeSize(request.getSize());
+        int requestedProblemCount = normalizePracticeProblemCount(request.getProblemCount());
 
         PracticeCursor cursor = getOrCreateBookmarkedPracticeCursor();
 
@@ -115,12 +115,12 @@ public class ProblemCommandServiceImpl implements ProblemCommandService {
         Long lastSelectedLeafFolderId = null;
 
         for (Folder leafFolder : orderedLeafFolders) {
-            if (selectedProblems.size() >= size) {
+            if (selectedProblems.size() >= requestedProblemCount) {
                 break;
             }
 
-            int remainingSize = size - selectedProblems.size();
-            int limit = Math.min(FOLDER_PROBLEM_LIMIT, remainingSize);
+            int remainingProblemCount = requestedProblemCount - selectedProblems.size();
+            int limit = Math.min(FOLDER_PROBLEM_LIMIT, remainingProblemCount);
 
             List<Problem> problemsInFolder = problemRepository.findBookmarkedProblemsByFolderIdForPractice(
                     leafFolder.getFolderId(),
@@ -140,14 +140,14 @@ public class ProblemCommandServiceImpl implements ProblemCommandService {
         cursor.updateLastLeafFolderId(lastSelectedLeafFolderId);
 
         return ProblemConverter.toBookmarkedPracticeProblemsResponse(
-                size,
+                requestedProblemCount,
                 FOLDER_PROBLEM_LIMIT,
                 lastSelectedLeafFolderId,
                 selectedProblems
         );
     }
 
-    private int normalizePracticeSize(Integer size) {
+    private int normalizePracticeProblemCount(Integer size) {
         if (size == null) {
             return 10;
         }
