@@ -1,5 +1,7 @@
 package com.hhd1337.jatuli_quiz.domain.problem.converter;
 
+import com.hhd1337.jatuli_quiz.domain.folder.entity.Folder;
+import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemBookmarkResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
@@ -34,6 +36,43 @@ public class ProblemConverter {
                 .savedCount(savedProblems.size())
                 .problems(savedProblems.stream()
                         .map(ProblemConverter::toImportedProblemItem)
+                        .toList())
+                .build();
+    }
+
+    public static PracticeResponse.BookmarkedPracticeProblemItem toBookmarkedPracticeProblemItem(
+            Problem problem
+    ) {
+        Folder folder = problem.getFolder();
+
+        return PracticeResponse.BookmarkedPracticeProblemItem.builder()
+                .problemId(problem.getProblemId())
+                .problemNum(problem.getProblemNum())
+                .questionText(problem.getQuestionText())
+                .explanationText(problem.getExplanationText())
+                .answerText(problem.getAnswerText())
+                .isBookmarked(problem.getIsBookmarked())
+                .solvedCount(problem.getSolvedCount())
+                .folderId(folder.getFolderId())
+                .folderName(folder.getName())
+                .folderPath(folder.getFullPath())
+                .build();
+    }
+
+    public static PracticeResponse.GetBookmarkedPracticeProblemsResponse toBookmarkedPracticeProblemsResponse(
+            Integer requestedSize,
+            Integer folderProblemLimit,
+            Long nextStartLeafFolderId,
+            List<Problem> problems
+    ) {
+        return PracticeResponse.GetBookmarkedPracticeProblemsResponse.builder()
+                .selectionRule("BOOKMARKED_LEAF_ROUND_ROBIN")
+                .requestedSize(requestedSize)
+                .returnedSize(problems.size())
+                .folderProblemLimit(folderProblemLimit)
+                .nextStartLeafFolderId(nextStartLeafFolderId)
+                .problems(problems.stream()
+                        .map(ProblemConverter::toBookmarkedPracticeProblemItem)
                         .toList())
                 .build();
     }

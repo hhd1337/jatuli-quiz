@@ -34,4 +34,35 @@ public class PracticeResponse {
         private Integer attemptCount;
         private Boolean isBookmarked;
     }
+ 
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class GetBookmarkedPracticeProblemsResponse {
+
+        private String selectionRule;
+        private Integer requestedSize;
+        private Integer returnedSize;
+        private Integer folderProblemLimit;
+        private Long nextStartLeafFolderId;
+        private List<BookmarkedPracticeProblemItem> problems;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class BookmarkedPracticeProblemItem {
+
+        private Long problemId;
+        private Integer problemNum;
+        private String questionText;
+        private String explanationText;
+        private String answerText;
+        private Boolean isBookmarked;
+        private Integer solvedCount;
+
+        private Long folderId;
+        private String folderName;
+        private String folderPath;
+    }
 }
