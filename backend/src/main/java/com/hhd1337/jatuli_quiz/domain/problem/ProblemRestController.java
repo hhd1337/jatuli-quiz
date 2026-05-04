@@ -8,6 +8,7 @@ import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportRequest;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.service.ProblemCommandService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -95,7 +96,7 @@ public class ProblemRestController {
     )
     @PostMapping("/bookmarked/practice")
     public ApiResponse<PracticeResponse.GetBookmarkedPracticeProblemsResponse> getBookmarkedPracticeProblems(
-            @RequestBody PracticeRequest.GetBookmarkedPracticeProblemsRequest request
+            @Valid @RequestBody PracticeRequest.GetBookmarkedPracticeProblemsRequest request
     ) {
         return ApiResponse.onSuccess(problemCommandService.getBookmarkedPracticeProblems(request));
     }
