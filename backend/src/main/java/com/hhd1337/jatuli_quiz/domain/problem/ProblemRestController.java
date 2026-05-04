@@ -1,6 +1,8 @@
 package com.hhd1337.jatuli_quiz.domain.problem;
 
 import com.hhd1337.jatuli_quiz.common.response.ApiResponse;
+import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeRequest;
+import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemBookmarkResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportRequest;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportResponse;
@@ -68,5 +70,33 @@ public class ProblemRestController {
                 new ProblemImportRequest.ImportProblemsFromTextRequest(folderId, rawText);
 
         return ApiResponse.onSuccess(problemCommandService.importProblemsFromText(request));
+    }
+
+    @Operation(
+            summary = "북마크 문제 전체순회 풀이 문제 조회",
+            description = """
+                    서비스 전체 leaf 폴더에 존재하는 북마크 문제들을 순회하며 풀이 문제 목록을 제공합니다.
+                    
+                    현재 MVP에서는 단일 사용자 기준으로 Problem의 isBookmarked, solvedCount 값을 사용합니다.
+                    북마크된 문제만 조회 대상에 포함하며, 북마크가 해제된 문제는 순회 대상에서 제외됩니다.
+                    
+                    순회 방식은 leaf 폴더 라운드로빈 방식입니다.
+                    마지막으로 문제를 제공한 leaf 폴더 위치를 practice_cursor에 저장하고,
+                    다음 요청 시 해당 폴더 다음 leaf 폴더부터 이어서 조회합니다.
+                    
+                    각 leaf 폴더에서는 solvedCount가 가장 낮은 문제를 우선 제공합니다.
+                    solvedCount가 같으면 problemNum 오름차순, problemId 오름차순으로 정렬합니다.
+                    
+                    한 leaf 폴더당 최대 2문제씩 연속으로 제공한 뒤 다음 leaf 폴더로 넘어갑니다.
+                    예: A1, A2, B1, B2, C1, C2
+                    
+                    cursor 갱신이 발생하므로 단순 조회가 아닌 POST 방식으로 제공합니다.
+                    """
+    )
+    @PostMapping("/bookmarked/practice")
+    public ApiResponse<PracticeResponse.GetBookmarkedPracticeProblemsResponse> getBookmarkedPracticeProblems(
+            @RequestBody PracticeRequest.GetBookmarkedPracticeProblemsRequest request
+    ) {
+        return ApiResponse.onSuccess(problemCommandService.getBookmarkedPracticeProblems(request));
     }
 }
