@@ -4,6 +4,11 @@ import com.hhd1337.jatuli_quiz.common.exception.GeneralException;
 import com.hhd1337.jatuli_quiz.common.exception.code.status.ErrorStatus;
 import com.hhd1337.jatuli_quiz.domain.folder.entity.Folder;
 import com.hhd1337.jatuli_quiz.domain.folder.repository.FolderRepository;
+import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeRequest;
+import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeResponse;
+import com.hhd1337.jatuli_quiz.domain.practice.entity.PracticeCursor;
+import com.hhd1337.jatuli_quiz.domain.practice.entity.PracticeCursorType;
+import com.hhd1337.jatuli_quiz.domain.practice.repository.PracticeCursorRepository;
 import com.hhd1337.jatuli_quiz.domain.problem.converter.ProblemConverter;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ParsedProblemContent;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemBookmarkResponse;
@@ -14,6 +19,7 @@ import com.hhd1337.jatuli_quiz.domain.problem.repository.ProblemRepository;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,9 +28,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class ProblemCommandServiceImpl implements ProblemCommandService {
 
+    private static final int FOLDER_PROBLEM_LIMIT = 2;
+
     private final ProblemRepository problemRepository;
     private final FolderRepository folderRepository;
     private final ProblemTextParser problemTextParser;
+    private final PracticeCursorRepository practiceCursorRepository;
 
     @Override
     public ProblemBookmarkResponse.ToggleBookmarkResponse toggleBookmark(Long problemId) {
@@ -81,5 +90,117 @@ public class ProblemCommandServiceImpl implements ProblemCommandService {
         if (hasChildFolders) {
             throw new GeneralException(ErrorStatus.PROBLEM_IMPORT_TARGET_NOT_LEAF);
         }
+    }
+
+    @Override
+    public PracticeResponse.GetBookmarkedPracticeProblemsResponse getBookmarkedPracticeProblems(
+            PracticeRequest.GetBookmarkedPracticeProblemsRequest request
+    ) {
+        int size = normalizePracticeSize(request.getSize());
+
+        PracticeCursor cursor = getOrCreateBookmarkedPracticeCursor();
+
+        List<Folder> leafFolders = problemRepository.findLeafFoldersHavingBookmarkedProblemsOrderByFolderIdAsc();
+
+        if (leafFolders.isEmpty()) {
+            throw new GeneralException(ErrorStatus.BOOKMARKED_PROBLEM_NOT_FOUND);
+        }
+
+        List<Folder> orderedLeafFolders = reorderLeafFoldersFromNextCursor(
+                leafFolders,
+                cursor.getLastLeafFolderId()
+        );
+
+        List<Problem> selectedProblems = new ArrayList<>();
+        Long lastSelectedLeafFolderId = null;
+
+        for (Folder leafFolder : orderedLeafFolders) {
+            if (selectedProblems.size() >= size) {
+                break;
+            }
+
+            int remainingSize = size - selectedProblems.size();
+            int limit = Math.min(FOLDER_PROBLEM_LIMIT, remainingSize);
+
+            List<Problem> problemsInFolder = problemRepository.findBookmarkedProblemsByFolderIdForPractice(
+                    leafFolder.getFolderId(),
+                    PageRequest.of(0, limit)
+            );
+
+            if (!problemsInFolder.isEmpty()) {
+                selectedProblems.addAll(problemsInFolder);
+                lastSelectedLeafFolderId = leafFolder.getFolderId();
+            }
+        }
+
+        if (selectedProblems.isEmpty()) {
+            throw new GeneralException(ErrorStatus.BOOKMARKED_PROBLEM_NOT_FOUND);
+        }
+
+        cursor.updateLastLeafFolderId(lastSelectedLeafFolderId);
+
+        return ProblemConverter.toBookmarkedPracticeProblemsResponse(
+                size,
+                FOLDER_PROBLEM_LIMIT,
+                lastSelectedLeafFolderId,
+                selectedProblems
+        );
+    }
+
+    private int normalizePracticeSize(Integer size) {
+        if (size == null) {
+            return 10;
+        }
+
+        if (size < 1) {
+            return 10;
+        }
+
+        return Math.min(size, 50);
+    }
+
+    private PracticeCursor getOrCreateBookmarkedPracticeCursor() {
+        return practiceCursorRepository.findByCursorTypeWithLock(
+                        PracticeCursorType.BOOKMARKED_LEAF_ROUND_ROBIN
+                )
+                .orElseGet(() -> practiceCursorRepository.save(
+                        PracticeCursor.create(PracticeCursorType.BOOKMARKED_LEAF_ROUND_ROBIN)
+                ));
+    }
+
+    private List<Folder> reorderLeafFoldersFromNextCursor(
+            List<Folder> leafFolders,
+            Long lastLeafFolderId
+    ) {
+        if (lastLeafFolderId == null) {
+            return leafFolders;
+        }
+
+        int lastIndex = findFolderIndex(leafFolders, lastLeafFolderId);
+
+        if (lastIndex == -1) {
+            return leafFolders;
+        }
+
+        int nextIndex = (lastIndex + 1) % leafFolders.size();
+
+        List<Folder> reordered = new ArrayList<>();
+
+        for (int i = 0; i < leafFolders.size(); i++) {
+            int index = (nextIndex + i) % leafFolders.size();
+            reordered.add(leafFolders.get(index));
+        }
+
+        return reordered;
+    }
+
+    private int findFolderIndex(List<Folder> leafFolders, Long folderId) {
+        for (int i = 0; i < leafFolders.size(); i++) {
+            if (leafFolders.get(i).getFolderId().equals(folderId)) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 }
