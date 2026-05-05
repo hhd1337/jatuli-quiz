@@ -11,8 +11,11 @@ import com.hhd1337.jatuli_quiz.domain.problemsubmission.dto.ProblemSubmissionReq
 import com.hhd1337.jatuli_quiz.domain.problemsubmission.dto.ProblemSubmissionResponse;
 import com.hhd1337.jatuli_quiz.domain.problemsubmission.entity.ProblemSubmission;
 import com.hhd1337.jatuli_quiz.domain.problemsubmission.repository.ProblemSubmissionRepository;
+import com.hhd1337.jatuli_quiz.domain.progress.entity.LearningProgress;
+import com.hhd1337.jatuli_quiz.domain.progress.repository.LearningProgressRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,9 +26,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class ProblemSubmissionCommandServiceImpl implements ProblemSubmissionCommandService {
 
+    private static final ZoneId SERVICE_ZONE = ZoneId.of("Asia/Seoul");
+
     private final ProblemRepository problemRepository;
     private final ProblemSubmissionRepository problemSubmissionRepository;
     private final DailyStatRepository dailyStatRepository;
+    private final LearningProgressRepository learningProgressRepository;
 
     @Override
     public ProblemSubmissionResponse.CreateProblemSubmissionResponse submit(
@@ -34,25 +40,68 @@ public class ProblemSubmissionCommandServiceImpl implements ProblemSubmissionCom
         Problem problem = problemRepository.findById(request.getProblemId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.PROBLEM_NOT_FOUND));
 
+        LearningProgress learningProgress = getOrCreateSingleUserLearningProgressWithLock();
+        Integer currentRoundNo = learningProgress.getCurrentBookmarkedRoundNo();
+
         int elapsedSeconds = request.getElapsedSeconds() == null ? 0 : request.getElapsedSeconds();
 
+        boolean isBookmarkedSubmission = Boolean.TRUE.equals(problem.getIsBookmarked());
+
         problem.increaseSolvedCount();
+
+        if (isBookmarkedSubmission) {
+            problem.markPracticedInBookmarkedRound(currentRoundNo);
+        }
 
         ProblemSubmission submission = new ProblemSubmission(
                 problem,
                 request.getIsCorrect(),
                 elapsedSeconds,
-                LocalDateTime.now()
+                LocalDateTime.now(SERVICE_ZONE)
         );
         problemSubmissionRepository.save(submission);
 
         DailyStat dailyStat = updateDailyStat(elapsedSeconds);
 
+        if (isBookmarkedSubmission) {
+            problemRepository.flush();
+            completeBookmarkedRoundIfNeeded(learningProgress, currentRoundNo);
+        }
+
         return ProblemSubmissionConverter.toCreateProblemSubmissionResponse(problem, dailyStat);
     }
 
+    private LearningProgress getOrCreateSingleUserLearningProgressWithLock() {
+        return learningProgressRepository.findByIdWithLock(LearningProgress.SINGLE_USER_PROGRESS_KEY)
+                .orElseGet(() -> learningProgressRepository.save(
+                        LearningProgress.createSingleUserProgress()
+                ));
+    }
+
+    private void completeBookmarkedRoundIfNeeded(
+            LearningProgress learningProgress,
+            Integer currentRoundNo
+    ) {
+        if (currentRoundNo == null) {
+            return;
+        }
+
+        int totalBookmarkedProblemCount = problemRepository.countByIsBookmarkedTrue();
+
+        if (totalBookmarkedProblemCount == 0) {
+            return;
+        }
+
+        int practicedBookmarkedProblemCount =
+                problemRepository.countByIsBookmarkedTrueAndLastPracticedBookmarkedRoundNo(currentRoundNo);
+
+        if (practicedBookmarkedProblemCount >= totalBookmarkedProblemCount) {
+            learningProgress.completeCurrentBookmarkedRound();
+        }
+    }
+
     private DailyStat updateDailyStat(int elapsedSeconds) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(SERVICE_ZONE);
 
         Optional<DailyStat> todayStatOptional = dailyStatRepository.findByStatDate(today);
 

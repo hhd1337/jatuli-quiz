@@ -47,6 +47,9 @@ public class Problem {
     @Column(name = "solved_count")
     private Integer solvedCount;
 
+    @Column(name = "last_practiced_bookmarked_round_no")
+    private Integer lastPracticedBookmarkedRoundNo;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "folder_id", nullable = false)
     private Folder folder;
@@ -100,5 +103,16 @@ public class Problem {
             return;
         }
         this.isBookmarked = !this.isBookmarked;
+    }
+
+    public void markPracticedInBookmarkedRound(Integer roundNo) {
+        if (roundNo == null) {
+            return;
+        }
+
+        if (this.lastPracticedBookmarkedRoundNo == null
+                || this.lastPracticedBookmarkedRoundNo < roundNo) {
+            this.lastPracticedBookmarkedRoundNo = roundNo;
+        }
     }
 }

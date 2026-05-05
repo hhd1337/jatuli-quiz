@@ -16,6 +16,8 @@ import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportRequest;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
 import com.hhd1337.jatuli_quiz.domain.problem.repository.ProblemRepository;
+import com.hhd1337.jatuli_quiz.domain.progress.entity.LearningProgress;
+import com.hhd1337.jatuli_quiz.domain.progress.repository.LearningProgressRepository;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,7 @@ public class ProblemCommandServiceImpl implements ProblemCommandService {
     private final FolderRepository folderRepository;
     private final ProblemTextParser problemTextParser;
     private final PracticeCursorRepository practiceCursorRepository;
+    private final LearningProgressRepository learningProgressRepository;
 
     @Override
     public ProblemBookmarkResponse.ToggleBookmarkResponse toggleBookmark(Long problemId) {
@@ -98,9 +101,13 @@ public class ProblemCommandServiceImpl implements ProblemCommandService {
     ) {
         int requestedProblemCount = normalizePracticeProblemCount(request.getProblemCount());
 
+        LearningProgress learningProgress = getOrCreateSingleUserLearningProgress();
+        Integer currentRoundNo = learningProgress.getCurrentBookmarkedRoundNo();
+
         PracticeCursor cursor = getOrCreateBookmarkedPracticeCursor();
 
-        List<Folder> leafFolders = problemRepository.findLeafFoldersHavingBookmarkedProblemsOrderByFolderIdAsc();
+        List<Folder> leafFolders = problemRepository
+                .findLeafFoldersHavingUnpracticedBookmarkedProblemsInRound(currentRoundNo);
 
         if (leafFolders.isEmpty()) {
             throw new GeneralException(ErrorStatus.BOOKMARKED_PROBLEM_NOT_FOUND);
@@ -122,10 +129,12 @@ public class ProblemCommandServiceImpl implements ProblemCommandService {
             int remainingProblemCount = requestedProblemCount - selectedProblems.size();
             int limit = Math.min(FOLDER_PROBLEM_LIMIT, remainingProblemCount);
 
-            List<Problem> problemsInFolder = problemRepository.findBookmarkedProblemsByFolderIdForPractice(
-                    leafFolder.getFolderId(),
-                    PageRequest.of(0, limit)
-            );
+            List<Problem> problemsInFolder = problemRepository
+                    .findUnpracticedBookmarkedProblemsByFolderIdForPractice(
+                            leafFolder.getFolderId(),
+                            currentRoundNo,
+                            PageRequest.of(0, limit)
+                    );
 
             if (!problemsInFolder.isEmpty()) {
                 selectedProblems.addAll(problemsInFolder);
@@ -147,16 +156,23 @@ public class ProblemCommandServiceImpl implements ProblemCommandService {
         );
     }
 
-    private int normalizePracticeProblemCount(Integer size) {
-        if (size == null) {
+    private int normalizePracticeProblemCount(Integer problemCount) {
+        if (problemCount == null) {
             return 10;
         }
 
-        if (size < 1) {
+        if (problemCount < 1) {
             return 10;
         }
 
-        return Math.min(size, 50);
+        return Math.min(problemCount, 50);
+    }
+
+    private LearningProgress getOrCreateSingleUserLearningProgress() {
+        return learningProgressRepository.findById(LearningProgress.SINGLE_USER_PROGRESS_KEY)
+                .orElseGet(() -> learningProgressRepository.save(
+                        LearningProgress.createSingleUserProgress()
+                ));
     }
 
     private PracticeCursor getOrCreateBookmarkedPracticeCursor() {

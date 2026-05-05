@@ -7,7 +7,10 @@ import com.hhd1337.jatuli_quiz.domain.folder.repository.FolderRepository;
 import com.hhd1337.jatuli_quiz.domain.home.converter.HomeConverter;
 import com.hhd1337.jatuli_quiz.domain.home.dto.HomeResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.repository.ProblemRepository;
+import com.hhd1337.jatuli_quiz.domain.progress.entity.LearningProgress;
+import com.hhd1337.jatuli_quiz.domain.progress.repository.LearningProgressRepository;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,14 +23,16 @@ public class HomeQueryServiceImpl implements HomeQueryService {
 
     private static final Long ROOT_FOLDER_ID = 1L;
     private static final int TODAY_GOAL_COUNT = 10;
+    private static final ZoneId SERVICE_ZONE = ZoneId.of("Asia/Seoul");
 
     private final DailyStatRepository dailyStatRepository;
     private final FolderRepository folderRepository;
     private final ProblemRepository problemRepository;
+    private final LearningProgressRepository learningProgressRepository;
 
     @Override
     public HomeResponse.GetHomeResponse getHome() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(SERVICE_ZONE);
 
         DailyStat todayStat = dailyStatRepository.findByStatDate(today).orElse(null);
 
@@ -52,7 +57,7 @@ public class HomeQueryServiceImpl implements HomeQueryService {
             totalSolvedCount = 0;
         }
 
-        int level = calculateLevel(totalSolvedCount);
+        int level = getCurrentLevel();
 
         HomeResponse.AchievementCard achievementCard = HomeConverter.toAchievementCard(
                 todayFocusSeconds,
@@ -72,6 +77,13 @@ public class HomeQueryServiceImpl implements HomeQueryService {
                 .toList();
 
         return HomeConverter.toGetHomeResponse(achievementCard, rootFolderItems);
+    }
+
+    private int getCurrentLevel() {
+        return learningProgressRepository
+                .findById(LearningProgress.SINGLE_USER_PROGRESS_KEY)
+                .map(LearningProgress::getLevel)
+                .orElse(1);
     }
 
     private HomeResponse.RootFolderItem toRootFolderItem(Folder folder) {
@@ -97,22 +109,6 @@ public class HomeQueryServiceImpl implements HomeQueryService {
         }
 
         return new FolderStats(total, solved);
-    }
-
-    private int calculateLevel(int totalSolvedCount) {
-        if (totalSolvedCount >= 200) {
-            return 5;
-        }
-        if (totalSolvedCount >= 120) {
-            return 4;
-        }
-        if (totalSolvedCount >= 60) {
-            return 3;
-        }
-        if (totalSolvedCount >= 20) {
-            return 2;
-        }
-        return 1;
     }
 
     private record FolderStats(int total, int solved) {

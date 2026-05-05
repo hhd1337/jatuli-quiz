@@ -66,4 +66,47 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
             Pageable pageable
     );
 
+    int countByIsBookmarkedTrue();
+
+    int countByIsBookmarkedTrueAndLastPracticedBookmarkedRoundNo(Integer roundNo);
+
+    @Query("""
+            select distinct f
+            from Problem p
+            join p.folder f
+            where p.isBookmarked = true
+              and (
+                  p.lastPracticedBookmarkedRoundNo is null
+                  or p.lastPracticedBookmarkedRoundNo < :currentRoundNo
+              )
+              and not exists (
+                  select 1
+                  from Folder child
+                  where child.parentFolder = f
+              )
+            order by f.folderId asc
+            """)
+    List<Folder> findLeafFoldersHavingUnpracticedBookmarkedProblemsInRound(
+            @Param("currentRoundNo") Integer currentRoundNo
+    );
+
+    @Query("""
+            select p
+            from Problem p
+            join fetch p.folder f
+            where f.folderId = :folderId
+              and p.isBookmarked = true
+              and (
+                  p.lastPracticedBookmarkedRoundNo is null
+                  or p.lastPracticedBookmarkedRoundNo < :currentRoundNo
+              )
+            order by coalesce(p.solvedCount, 0) asc,
+                     p.problemNum asc,
+                     p.problemId asc
+            """)
+    List<Problem> findUnpracticedBookmarkedProblemsByFolderIdForPractice(
+            @Param("folderId") Long folderId,
+            @Param("currentRoundNo") Integer currentRoundNo,
+            Pageable pageable
+    );
 }
