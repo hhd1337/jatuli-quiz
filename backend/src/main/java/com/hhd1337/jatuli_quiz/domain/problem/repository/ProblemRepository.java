@@ -66,4 +66,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
             Pageable pageable
     );
 
+    int countByIsBookmarkedTrue();
+
+    int countByIsBookmarkedTrueAndLastPracticedBookmarkedRoundNo(Integer roundNo);
 }
