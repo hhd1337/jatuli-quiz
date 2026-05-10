@@ -35,6 +35,7 @@ public class HomeQueryServiceImpl implements HomeQueryService {
         LocalDate today = LocalDate.now(SERVICE_ZONE);
 
         DailyStat todayStat = dailyStatRepository.findByStatDate(today).orElse(null);
+        LearningProgress learningProgress = getLearningProgressOrNull();
 
         int todayFocusSeconds = todayStat == null || todayStat.getFocusSeconds() == null
                 ? 0
@@ -57,7 +58,7 @@ public class HomeQueryServiceImpl implements HomeQueryService {
             totalSolvedCount = 0;
         }
 
-        int level = getCurrentLevel();
+        int level = getCurrentLevel(learningProgress);
 
         HomeResponse.AchievementCard achievementCard = HomeConverter.toAchievementCard(
                 todayFocusSeconds,
@@ -70,20 +71,61 @@ public class HomeQueryServiceImpl implements HomeQueryService {
                 todaySolvedCount
         );
 
+        HomeResponse.BookmarkCycleProgress bookmarkCycleProgress =
+                getBookmarkCycleProgress(learningProgress);
+
         List<Folder> rootFolders = folderRepository.findAllByParentFolder_FolderIdOrderByFolderIdAsc(ROOT_FOLDER_ID);
 
         List<HomeResponse.RootFolderItem> rootFolderItems = rootFolders.stream()
                 .map(this::toRootFolderItem)
                 .toList();
 
-        return HomeConverter.toGetHomeResponse(achievementCard, rootFolderItems);
+        return HomeConverter.toGetHomeResponse(
+                achievementCard,
+                bookmarkCycleProgress,
+                rootFolderItems
+        );
     }
 
-    private int getCurrentLevel() {
+    private LearningProgress getLearningProgressOrNull() {
         return learningProgressRepository
                 .findById(LearningProgress.SINGLE_USER_PROGRESS_KEY)
-                .map(LearningProgress::getLevel)
-                .orElse(1);
+                .orElse(null);
+    }
+
+    private int getCurrentLevel(LearningProgress learningProgress) {
+        if (learningProgress == null) {
+            return 1;
+        }
+
+        return learningProgress.getLevel();
+    }
+
+    private int getCurrentBookmarkedRoundNo(LearningProgress learningProgress) {
+        if (learningProgress == null || learningProgress.getCurrentBookmarkedRoundNo() == null) {
+            return 1;
+        }
+
+        return learningProgress.getCurrentBookmarkedRoundNo();
+    }
+
+    private HomeResponse.BookmarkCycleProgress getBookmarkCycleProgress(
+            LearningProgress learningProgress
+    ) {
+        int currentBookmarkedRoundNo = getCurrentBookmarkedRoundNo(learningProgress);
+
+        int totalBookmarkedProblemCount = problemRepository.countByIsBookmarkedTrue();
+
+        int currentCycleSolvedProblemCount =
+                problemRepository.countByIsBookmarkedTrueAndLastPracticedBookmarkedRoundNoGreaterThanEqual(
+                        currentBookmarkedRoundNo
+                );
+
+        return HomeConverter.toBookmarkCycleProgress(
+                currentBookmarkedRoundNo,
+                totalBookmarkedProblemCount,
+                currentCycleSolvedProblemCount
+        );
     }
 
     private HomeResponse.RootFolderItem toRootFolderItem(Folder folder) {

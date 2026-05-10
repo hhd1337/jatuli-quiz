@@ -12,6 +12,7 @@ public class HomeResponse {
     @AllArgsConstructor
     public static class GetHomeResponse {
         private AchievementCard achievementCard;
+        private BookmarkCycleProgress bookmarkCycleProgress;
         private List<RootFolderItem> rootFolders;
     }
 
@@ -27,6 +28,16 @@ public class HomeResponse {
         private Integer level;
         private Integer todayGoalCount;
         private Integer todayGoalSolvedCount;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class BookmarkCycleProgress {
+        private Integer currentBookmarkedRoundNo;
+        private Integer totalBookmarkedProblemCount;
+        private Integer currentCycleSolvedProblemCount;
+        private Integer progressPercent;
     }
 
     @Getter
