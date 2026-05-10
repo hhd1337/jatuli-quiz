@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { getFolderPractice } from "../../shared/api/folderApi";
+import { getBookmarkedPractice } from "../../shared/api/quizApi";
 import FabGroup from "../../features/fab/FabGroup";
 
 export default function QuizPlayPage() {
@@ -11,12 +12,16 @@ export default function QuizPlayPage() {
     const folderId = searchParams.get("folderId");
     const mode = searchParams.get("mode");
 
+    const isBookmarkMode = mode === "bookmark";
+    const isRandomMode = mode === "random";
+    const isUnsupportedMode = !!mode && !isBookmarkMode && !isRandomMode;
+
     const initialTitlePath = location.state?.titlePath ?? "";
     const parentFolderId = location.state?.parentFolderId ?? null;
 
     const [isMusicOn, setIsMusicOn] = useState(false);
     const [localProblems, setLocalProblems] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [titlePath, setTitlePath] = useState(initialTitlePath);
     const [showCompleteScreen, setShowCompleteScreen] = useState(false);
@@ -27,36 +32,77 @@ export default function QuizPlayPage() {
     const problems = localProblems;
 
     useEffect(() => {
-        async function fetchPracticeProblems() {
-            if (!folderId) return;
+        let ignore = false;
 
+        async function fetchPracticeProblems() {
             try {
                 setLoading(true);
                 setError("");
+                setLocalProblems([]);
                 setShowCompleteScreen(false);
-
-                const data = await getFolderPractice(folderId);
-                setLocalProblems(data.problems ?? []);
-
-                if (data.titlePath) {
-                    setTitlePath(data.titlePath);
-                }
-
                 setCurrentIndex(0);
                 setShowAnswer(false);
+
+                if (isBookmarkMode) {
+                    const data = await getBookmarkedPractice();
+
+                    if (ignore) return;
+
+                    setLocalProblems(data.problems ?? []);
+                    setTitlePath(data.titlePath ?? "북마크 문제 전체 순회");
+                    return;
+                }
+
+                if (isRandomMode) {
+                    setError("랜덤 문제 풀기는 아직 별도 연동 전입니다.");
+                    setTitlePath("랜덤 문제 풀기");
+                    return;
+                }
+
+                if (isUnsupportedMode) {
+                    setError(`지원하지 않는 문제 풀이 모드입니다: ${mode}`);
+                    setTitlePath("QuizPlayPage");
+                    return;
+                }
+
+                if (!folderId) {
+                    setError("folderId가 없습니다. leaf 폴더에서 진입해주세요.");
+                    setTitlePath("QuizPlayPage");
+                    return;
+                }
+
+                const data = await getFolderPractice(folderId);
+
+                if (ignore) return;
+
+                setLocalProblems(data.problems ?? []);
+                setTitlePath(data.titlePath || `폴더 ${folderId}`);
             } catch (err) {
+                if (ignore) return;
+
                 console.error("연습 문제 조회 실패:", err);
                 setError("문제 목록을 불러오지 못했습니다.");
                 setLocalProblems([]);
             } finally {
-                setLoading(false);
+                if (!ignore) {
+                    setLoading(false);
+                }
             }
         }
 
         fetchPracticeProblems();
-    }, [folderId]);
 
-    const handleExitFolder = () => {
+        return () => {
+            ignore = true;
+        };
+    }, [folderId, mode, isBookmarkMode, isRandomMode, isUnsupportedMode]);
+
+    const handleExit = () => {
+        if (isBookmarkMode || isRandomMode || isUnsupportedMode) {
+            navigate("/");
+            return;
+        }
+
         if (parentFolderId) {
             navigate(`/folders/${parentFolderId}`);
             return;
@@ -65,30 +111,38 @@ export default function QuizPlayPage() {
         navigate(-1);
     };
 
-    if (!folderId) {
-        return (
-            <div style={{ maxWidth: 800, margin: "0 auto" }}>
-                <h1>QuizPlayPage</h1>
-                <p>folderId가 없습니다. leaf 폴더에서 진입해주세요.</p>
-                <p style={{ opacity: 0.7 }}>
-                    예: <code>/quiz/play?folderId=9</code>
-                </p>
+    const getExitButtonText = () => {
+        if (isBookmarkMode || isRandomMode || isUnsupportedMode) {
+            return "홈으로";
+        }
 
-                {mode && (
-                    <p style={{ opacity: 0.7 }}>
-                        mode=<code>{mode}</code> 는 아직 별도 연동 전입니다.
-                    </p>
-                )}
+        return "폴더 나가기";
+    };
 
-                <button onClick={() => navigate("/")}>홈으로</button>
-            </div>
-        );
-    }
+    const getEmptyMessage = () => {
+        if (isBookmarkMode) {
+            return "이번 북마크 순회에서 풀 문제가 없습니다.";
+        }
+
+        if (isRandomMode) {
+            return "랜덤 문제를 불러올 수 없습니다.";
+        }
+
+        return "이 폴더에는 문제가 없습니다.";
+    };
+
+    const getCompleteMessage = () => {
+        if (isBookmarkMode) {
+            return "이번 북마크 순회에서 불러온 문제를 모두 확인했어요.";
+        }
+
+        return "이 폴더의 문제를 끝까지 모두 확인했어요.";
+    };
 
     if (loading) {
         return (
             <div style={{ maxWidth: 800, margin: "0 auto" }}>
-                <h1 style={{ margin: 0 }}>{titlePath || `폴더 ${folderId}`}</h1>
+                <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
                 <p>문제를 불러오는 중...</p>
             </div>
         );
@@ -97,9 +151,16 @@ export default function QuizPlayPage() {
     if (error) {
         return (
             <div style={{ maxWidth: 800, margin: "0 auto" }}>
-                <h1 style={{ margin: 0 }}>{titlePath || `폴더 ${folderId}`}</h1>
+                <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
                 <p>{error}</p>
-                <button onClick={handleExitFolder}>폴더 나가기</button>
+
+                {!isBookmarkMode && !isRandomMode && !isUnsupportedMode && !folderId && (
+                    <p style={{ opacity: 0.7 }}>
+                        예: <code>/quiz/play?folderId=9</code>
+                    </p>
+                )}
+
+                <button onClick={handleExit}>{getExitButtonText()}</button>
             </div>
         );
     }
@@ -107,9 +168,9 @@ export default function QuizPlayPage() {
     if (problems.length === 0) {
         return (
             <div style={{ maxWidth: 800, margin: "0 auto" }}>
-                <h1 style={{ margin: 0 }}>{titlePath || `폴더 ${folderId}`}</h1>
-                <p>이 폴더에는 문제가 없습니다.</p>
-                <button onClick={handleExitFolder}>폴더 나가기</button>
+                <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
+                <p>{getEmptyMessage()}</p>
+                <button onClick={handleExit}>{getExitButtonText()}</button>
             </div>
         );
     }
@@ -131,10 +192,8 @@ export default function QuizPlayPage() {
             >
                 <div style={{ fontSize: 64 }}>🎉</div>
                 <h1 style={{ margin: 0 }}>모두 풀었습니다!</h1>
-                <p style={{ opacity: 0.8 }}>
-                    이 폴더의 문제를 끝까지 모두 확인했어요.
-                </p>
-                <button onClick={handleExitFolder}>폴더 목록으로 돌아가기</button>
+                <p style={{ opacity: 0.8 }}>{getCompleteMessage()}</p>
+                <button onClick={handleExit}>{getExitButtonText()}</button>
             </div>
         );
     }
@@ -195,7 +254,7 @@ export default function QuizPlayPage() {
                     alignItems: "baseline",
                 }}
             >
-                <h1 style={{ margin: 0 }}>{titlePath || `폴더 ${folderId}`}</h1>
+                <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
                 <div style={{ opacity: 0.7 }}>
                     {currentIndex + 1} / {problems.length}
                 </div>
@@ -233,7 +292,7 @@ export default function QuizPlayPage() {
                     이전 문제
                 </button>
                 <button onClick={goNext}>다음 문제</button>
-                <button onClick={handleExitFolder}>폴더 나가기</button>
+                <button onClick={handleExit}>{getExitButtonText()}</button>
             </div>
 
             {showAnswer && (
