@@ -1,7 +1,7 @@
 import { apiClient } from "./client";
 
 function formatSecondsToKoreanTime(totalSeconds) {
-    const safeSeconds = Math.max(0, Number(totalSeconds) || 0);
+    const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
 
     const hours = Math.floor(safeSeconds / 3600);
     const minutes = Math.floor((safeSeconds % 3600) / 60);
@@ -12,9 +12,11 @@ function formatSecondsToKoreanTime(totalSeconds) {
     if (hours > 0) {
         parts.push(`${hours}시간`);
     }
+
     if (minutes > 0) {
         parts.push(`${minutes}분`);
     }
+
     if (seconds > 0 || parts.length === 0) {
         parts.push(`${seconds}초`);
     }
@@ -22,9 +24,53 @@ function formatSecondsToKoreanTime(totalSeconds) {
     return parts.join(" ");
 }
 
+function toNonNegativeNumber(value, fallback = 0) {
+    const numberValue = Number(value);
+
+    if (!Number.isFinite(numberValue)) {
+        return fallback;
+    }
+
+    return Math.max(0, Math.floor(numberValue));
+}
+
 function normalizeHomeResponse(raw) {
     const achievementCard = raw?.achievementCard ?? {};
+    const bookmarkCycleProgress = raw?.bookmarkCycleProgress ?? {};
     const rootFolders = Array.isArray(raw?.rootFolders) ? raw.rootFolders : [];
+
+    const totalBookmarkedProblemCount = toNonNegativeNumber(
+        bookmarkCycleProgress.totalBookmarkedProblemCount,
+        0
+    );
+
+    const rawCurrentCycleSolvedProblemCount = toNonNegativeNumber(
+        bookmarkCycleProgress.currentCycleSolvedProblemCount,
+        0
+    );
+
+    const currentCycleSolvedProblemCount =
+        totalBookmarkedProblemCount > 0
+            ? Math.min(rawCurrentCycleSolvedProblemCount, totalBookmarkedProblemCount)
+            : 0;
+
+    const currentBookmarkedRoundNo = Math.max(
+        1,
+        toNonNegativeNumber(bookmarkCycleProgress.currentBookmarkedRoundNo, 1)
+    );
+
+    const progressPercent =
+        bookmarkCycleProgress.progressPercent !== undefined &&
+        bookmarkCycleProgress.progressPercent !== null
+            ? Math.min(
+                100,
+                toNonNegativeNumber(bookmarkCycleProgress.progressPercent, 0)
+            )
+            : totalBookmarkedProblemCount > 0
+                ? Math.floor(
+                    (currentCycleSolvedProblemCount / totalBookmarkedProblemCount) * 100
+                )
+                : 0;
 
     return {
         summary: {
@@ -42,6 +88,15 @@ function normalizeHomeResponse(raw) {
                 goalCount: achievementCard.todayGoalCount ?? 10,
                 solvedCount: achievementCard.todayGoalSolvedCount ?? 0,
             },
+            bookmarkCycle: {
+                currentBookmarkedRoundNo,
+                totalBookmarkedProblemCount,
+                currentCycleSolvedProblemCount,
+                progressPercent,
+                isCompleted:
+                    totalBookmarkedProblemCount > 0 &&
+                    currentCycleSolvedProblemCount >= totalBookmarkedProblemCount,
+            },
         },
         rootFolders: rootFolders.map((folder) => ({
             folderId: folder.folderId,
@@ -51,7 +106,7 @@ function normalizeHomeResponse(raw) {
         })),
         quickActions: [
             { key: "RANDOM", label: "랜덤 문제 풀기" },
-            { key: "BOOKMARK", label: "북마크 문제 풀기" },
+            { key: "BOOKMARK", label: "북마크 문제 전체순회 시작" },
         ],
     };
 }

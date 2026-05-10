@@ -1,5 +1,15 @@
 import { apiClient } from "./client";
 
+function toNonNegativeNumber(value, fallback = 0) {
+    const numberValue = Number(value);
+
+    if (!Number.isFinite(numberValue)) {
+        return fallback;
+    }
+
+    return Math.max(0, Math.floor(numberValue));
+}
+
 function normalizeFolderChildren(raw) {
     const breadcrumb = Array.isArray(raw?.breadcrumb) ? raw.breadcrumb : [];
     const folders = Array.isArray(raw?.folders) ? raw.folders : [];
@@ -20,9 +30,15 @@ function normalizeFolderChildren(raw) {
                 children: folders.map((folder) => ({
                     folderId: folder.folderId,
                     name: folder.name ?? "",
-                    solvedCount: folder.solved ?? 0,
-                    totalCount: folder.total ?? 0,
-                    isLeaf: !folder.hasChildren,
+                    solvedCount: toNonNegativeNumber(
+                        folder.solvedProblemCount ?? folder.solved,
+                        0
+                    ),
+                    totalCount: toNonNegativeNumber(
+                        folder.totalProblemCount ?? folder.total,
+                        0
+                    ),
+                    isLeaf: folder.isLeaf ?? !folder.hasChildren,
                 })),
             },
         ],
@@ -44,25 +60,46 @@ function normalizeExplanationToBlocks(explanation) {
         }));
 }
 
+function normalizePracticeProblem(problem, index) {
+    const explanation =
+        problem?.explanation ??
+        problem?.explanationText ??
+        "";
+
+    return {
+        problemId: problem?.problemId ?? null,
+        questionNo: problem?.questionNo ?? problem?.problemNum ?? index + 1,
+        questionText: problem?.question ?? problem?.questionText ?? "",
+        questionImages: Array.isArray(problem?.questionImages)
+            ? problem.questionImages
+            : [],
+        answerText: problem?.answer ?? problem?.answerText ?? "",
+        explanationBlocks: Array.isArray(problem?.explanationBlocks)
+            ? problem.explanationBlocks
+            : normalizeExplanationToBlocks(explanation),
+        meta: {
+            attemptCount: toNonNegativeNumber(
+                problem?.meta?.attemptCount ?? problem?.solvedCount,
+                0
+            ),
+            isBookmarked:
+                problem?.meta?.isBookmarked ??
+                problem?.isBookmarked ??
+                false,
+        },
+    };
+}
+
 function normalizePracticeResponse(raw, folderId) {
+    const problems = Array.isArray(raw?.problems) ? raw.problems : [];
+
     return {
         folderId: Number(folderId),
-        titlePath: "",
+        titlePath: raw?.titlePath ?? raw?.folderPath ?? "",
         selectionRule: raw?.selectionRule ?? "ALL",
-        problems: Array.isArray(raw?.problems)
-            ? raw.problems.map((problem) => ({
-                problemId: problem?.problemId ?? null,
-                questionNo: problem?.problemNum ?? 0,
-                questionText: problem?.question ?? "",
-                questionImages: [],
-                answerText: problem?.answer ?? "",
-                explanationBlocks: normalizeExplanationToBlocks(problem?.explanation),
-                meta: {
-                    attemptCount: problem?.meta?.attemptCount ?? 0,
-                    isBookmarked: problem?.meta?.isBookmarked ?? false,
-                },
-            }))
-            : [],
+        problems: problems.map((problem, index) =>
+            normalizePracticeProblem(problem, index)
+        ),
     };
 }
 

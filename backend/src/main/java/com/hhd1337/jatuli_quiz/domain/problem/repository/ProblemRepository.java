@@ -109,4 +109,6 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
             @Param("currentRoundNo") Integer currentRoundNo,
             Pageable pageable
     );
+
+    int countByIsBookmarkedTrueAndLastPracticedBookmarkedRoundNoGreaterThanEqual(Integer roundNo);
 }
