@@ -57,7 +57,7 @@ export default function HomePage() {
 
     const { summary, rootFolders, quickActions } = homeData;
 
-    const randomAction = quickActions.find((action) => action.key === "RANDOM");
+    // const randomAction = quickActions.find((action) => action.key === "RANDOM");
     const bookmarkAction = quickActions.find((action) => action.key === "BOOKMARK");
 
     const bookmarkCycle = summary.bookmarkCycle;
@@ -97,19 +97,19 @@ export default function HomePage() {
             <div style={{ marginBottom: 32 }}>
                 <h2>빠른 실행</h2>
 
-                {randomAction && (
-                    <button
-                        type="button"
-                        onClick={() => navigate("/quiz/play?mode=random")}
-                        style={{
-                            marginBottom: 16,
-                            padding: "6px 12px",
-                            cursor: "pointer",
-                        }}
-                    >
-                        🎲 {randomAction.label}
-                    </button>
-                )}
+                {/*{randomAction && (*/}
+                {/*    <button*/}
+                {/*        type="button"*/}
+                {/*        onClick={() => navigate("/quiz/play?mode=random")}*/}
+                {/*        style={{*/}
+                {/*            marginBottom: 16,*/}
+                {/*            padding: "6px 12px",*/}
+                {/*            cursor: "pointer",*/}
+                {/*        }}*/}
+                {/*    >*/}
+                {/*        🎲 {randomAction.label}*/}
+                {/*    </button>*/}
+                {/*)}*/}
 
                 <div
                     style={{
