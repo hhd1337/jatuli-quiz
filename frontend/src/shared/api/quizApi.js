@@ -64,8 +64,7 @@ function normalizeProblem(rawProblem, index) {
                 problem.isBookmarked ??
                 true,
             attemptCount: toNonNegativeNumber(
-                problem.meta?.attemptCount ??
-                problem.solvedCount,
+                problem.meta?.attemptCount ?? problem.solvedCount,
                 0
             ),
         },
@@ -100,4 +99,18 @@ export async function getBookmarkedPractice(problemCount = 10) {
         response.data.result,
         "북마크 문제 전체 순회"
     );
+}
+
+export async function submitProblemSubmission({
+                                                  problemId,
+                                                  isCorrect,
+                                                  elapsedSeconds,
+                                              }) {
+    const response = await apiClient.post("/problem-submissions", {
+        problemId,
+        isCorrect,
+        elapsedSeconds,
+    });
+
+    return response.data.result;
 }
