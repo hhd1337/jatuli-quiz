@@ -15,7 +15,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "http://localhost:5173",
                         "https://jatuli.online",
                         "https://www.jatuli.online",
-                        "https://jatuli-quiz-frontend.vercel.app"
+                        "https://jatuli-quiz-frontend.vercel.app",
+                        "https://api.jatuli.online"
                 )
                 .allowedMethods("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
