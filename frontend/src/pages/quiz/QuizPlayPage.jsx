@@ -165,7 +165,7 @@ function getPracticeTitlePath(data, fallbackTitlePath = "문제 풀이") {
         }
     }
 
-    return fallbackTitlePath;
+    return normalizePathText(fallbackTitlePath) || "문제 풀이";
 }
 
 function getProblemTitlePath(problem, fallbackTitlePath = "문제 풀이") {
@@ -217,7 +217,7 @@ function getProblemTitlePath(problem, fallbackTitlePath = "문제 풀이") {
         }
     }
 
-    return fallbackTitlePath;
+    return normalizePathText(fallbackTitlePath) || "문제 풀이";
 }
 
 export default function QuizPlayPage() {

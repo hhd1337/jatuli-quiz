@@ -56,6 +56,6 @@ export async function getFolderPractice(folderId) {
 
     return normalizePracticeResponse(
         response.data.result,
-        `폴더 ${folderId}`
+        ""
     );
 }
