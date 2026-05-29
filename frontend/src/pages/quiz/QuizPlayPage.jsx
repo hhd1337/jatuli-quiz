@@ -6,6 +6,7 @@ import {
     submitProblemSubmission,
 } from "../../shared/api/quizApi";
 import FabGroup from "../../features/fab/FabGroup";
+import MarkdownContent from "../../shared/components/MarkdownContent";
 
 const TEN_MINUTES_IN_SECONDS = 10 * 60;
 
@@ -621,8 +622,20 @@ export default function QuizPlayPage() {
             <hr style={{ margin: "16px 0" }} />
 
             <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 18, fontWeight: 600 }}>
-                    💁‍♂ {problem.questionText}
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 6,
+                        fontSize: 18,
+                        fontWeight: 600,
+                    }}
+                >
+                    <span style={{ flexShrink: 0, lineHeight: 1.7 }}>💁‍♂</span>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <MarkdownContent value={problem.questionText} />
+                    </div>
                 </div>
             </div>
 
@@ -650,12 +663,12 @@ export default function QuizPlayPage() {
                 >
                     <div style={{ marginBottom: 20 }}>
                         <div style={{ marginBottom: 6, fontWeight: 600 }}>해설</div>
-                        <ExplanationBlocks blocks={problem.explanationBlocks ?? []} />
+                        <MarkdownContent value={problem.explanationText} />
                     </div>
 
                     <div>
                         <div style={{ marginBottom: 6, fontWeight: 600 }}>정답</div>
-                        {problem.answerText}
+                        <MarkdownContent value={problem.answerText} />
                     </div>
                 </div>
             )}
