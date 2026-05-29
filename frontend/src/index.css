@@ -1,9 +1,9 @@
 :root {
     /* 앱 전체 기본 배경색 */
-    --color-bg: #111827;
+    --color-bg: #191919;
 
     /* 카드, 모달, 주요 박스 배경색 */
-    --color-surface: #1f2937;
+    --color-surface: #252525;
 
     /* 진행률 바 배경, 인라인 코드 배경, 보조 박스 배경색 */
     --color-surface-soft: #374151;
