@@ -10,6 +10,68 @@ import MarkdownContent from "../../shared/components/MarkdownContent";
 
 const TEN_MINUTES_IN_SECONDS = 10 * 60;
 
+const pageStyle = {
+    maxWidth: 800,
+    margin: "0 auto",
+    color: "var(--color-text, #f9fafb)",
+};
+
+const mutedTextStyle = {
+    color: "var(--color-text-muted, #9ca3af)",
+};
+
+const hrStyle = {
+    margin: "16px 0",
+    border: "none",
+    borderTop: "1px solid var(--color-border, #374151)",
+};
+
+const answerCardStyle = {
+    border: "1px solid var(--color-border, #374151)",
+    background: "var(--color-surface, #1f2937)",
+    color: "var(--color-text, #f9fafb)",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+};
+
+const modalCardStyle = {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: "var(--color-surface, #1f2937)",
+    color: "var(--color-text, #f9fafb)",
+    border: "1px solid var(--color-border, #374151)",
+    borderRadius: 12,
+    padding: 24,
+    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.35)",
+};
+
+const inputStyle = {
+    width: 80,
+    padding: 8,
+    fontSize: 16,
+    background: "var(--color-bg, #111827)",
+    color: "var(--color-text, #f9fafb)",
+    border: "1px solid var(--color-border, #374151)",
+    borderRadius: 6,
+};
+
+function getButtonStyle(disabled = false) {
+    return {
+        border: "1px solid var(--color-border, #374151)",
+        background: disabled
+            ? "var(--color-button-disabled-bg, #1f2937)"
+            : "var(--color-button-bg, #374151)",
+        color: disabled
+            ? "var(--color-button-disabled-text, #6b7280)"
+            : "var(--color-button-text, #f9fafb)",
+        padding: "6px 10px",
+        borderRadius: 6,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.65 : 1,
+    };
+}
+
 function getNowSeconds(startedAt) {
     return Math.max(1, Math.floor((Date.now() - startedAt) / 1000));
 }
@@ -517,36 +579,40 @@ export default function QuizPlayPage() {
 
     if (loading) {
         return (
-            <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <div style={pageStyle}>
                 <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
-                <p>문제를 불러오는 중...</p>
+                <p style={mutedTextStyle}>문제를 불러오는 중...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <div style={pageStyle}>
                 <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
-                <p>{error}</p>
+                <p style={{ color: "var(--color-danger, #fca5a5)" }}>{error}</p>
 
                 {!isBookmarkMode && !isRandomMode && !isUnsupportedMode && !folderId && (
-                    <p style={{ opacity: 0.7 }}>
+                    <p style={mutedTextStyle}>
                         예: <code>/quiz/play?folderId=9</code>
                     </p>
                 )}
 
-                <button onClick={handleExit}>{getExitButtonText()}</button>
+                <button style={getButtonStyle(false)} onClick={handleExit}>
+                    {getExitButtonText()}
+                </button>
             </div>
         );
     }
 
     if (problems.length === 0) {
         return (
-            <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <div style={pageStyle}>
                 <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
-                <p>{getEmptyMessage()}</p>
-                <button onClick={handleExit}>{getExitButtonText()}</button>
+                <p style={mutedTextStyle}>{getEmptyMessage()}</p>
+                <button style={getButtonStyle(false)} onClick={handleExit}>
+                    {getExitButtonText()}
+                </button>
             </div>
         );
     }
@@ -555,8 +621,7 @@ export default function QuizPlayPage() {
         return (
             <div
                 style={{
-                    maxWidth: 800,
-                    margin: "0 auto",
+                    ...pageStyle,
                     minHeight: "60vh",
                     display: "flex",
                     flexDirection: "column",
@@ -568,8 +633,10 @@ export default function QuizPlayPage() {
             >
                 <div style={{ fontSize: 64 }}>🎉</div>
                 <h1 style={{ margin: 0 }}>모두 풀었습니다!</h1>
-                <p style={{ opacity: 0.8 }}>{getCompleteMessage()}</p>
-                <button onClick={handleExit}>{getExitButtonText()}</button>
+                <p style={mutedTextStyle}>{getCompleteMessage()}</p>
+                <button style={getButtonStyle(false)} onClick={handleExit}>
+                    {getExitButtonText()}
+                </button>
             </div>
         );
     }
@@ -580,16 +647,20 @@ export default function QuizPlayPage() {
         titlePath || "문제 풀이"
     );
 
+    const isPrevDisabled = currentIndex === 0 || submitting;
+    const isNextDisabled = submitting;
+    const isExitDisabled = submitting;
+
     return (
-        <div style={{ maxWidth: 800, margin: "0 auto" }}>
+        <div style={pageStyle}>
             <div
                 style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "baseline",
+                    gap: 16,
                 }}
             >
-                {/*<h1 style={{ margin: 0, fontSize: 20 }}>{currentTitlePath}  ️[{problem.questionNo}번]</h1>*/}
                 <div
                     style={{
                         display: "flex",
@@ -614,12 +685,13 @@ export default function QuizPlayPage() {
                         onClick={toggleBookmark}
                     />
                 </div>
-                <div style={{ opacity: 0.7 }}>
+
+                <div style={mutedTextStyle}>
                     {currentIndex + 1} / {problems.length}
                 </div>
             </div>
 
-            <hr style={{ margin: "16px 0" }} />
+            <hr style={hrStyle} />
 
             <div style={{ marginBottom: 16 }}>
                 <div
@@ -646,21 +718,19 @@ export default function QuizPlayPage() {
                             key={img.imageId ?? idx}
                             src={img.url}
                             alt={img.alt ?? "question"}
-                            style={{ maxWidth: "100%", borderRadius: 8, marginBottom: 8 }}
+                            style={{
+                                maxWidth: "100%",
+                                borderRadius: 8,
+                                marginBottom: 8,
+                                border: "1px solid var(--color-border, #374151)",
+                            }}
                         />
                     ))}
                 </div>
             )}
 
             {showAnswer && (
-                <div
-                    style={{
-                        border: "1px solid #ddd",
-                        borderRadius: 12,
-                        padding: 16,
-                        marginBottom: 16,
-                    }}
-                >
+                <div style={answerCardStyle}>
                     <div style={{ marginBottom: 20 }}>
                         <div style={{ marginBottom: 6, fontWeight: 600 }}>해설</div>
                         <MarkdownContent value={problem.explanationText} />
@@ -681,25 +751,45 @@ export default function QuizPlayPage() {
                     flexWrap: "wrap",
                 }}
             >
-                <button onClick={() => setShowAnswer((v) => !v)}>
+                <button
+                    style={getButtonStyle(false)}
+                    onClick={() => setShowAnswer((v) => !v)}
+                >
                     {showAnswer ? "정답/해설 숨기기" : "정답/해설 보기"}
                 </button>
 
-                <button onClick={goPrev} disabled={currentIndex === 0 || submitting}>
+                <button
+                    style={getButtonStyle(isPrevDisabled)}
+                    onClick={goPrev}
+                    disabled={isPrevDisabled}
+                >
                     이전 문제
                 </button>
 
-                <button onClick={handleNextClick} disabled={submitting}>
+                <button
+                    style={getButtonStyle(isNextDisabled)}
+                    onClick={handleNextClick}
+                    disabled={isNextDisabled}
+                >
                     {submitting ? "제출 중..." : "다음 문제"}
                 </button>
 
-                <button onClick={handleExit} disabled={submitting}>
+                <button
+                    style={getButtonStyle(isExitDisabled)}
+                    onClick={handleExit}
+                    disabled={isExitDisabled}
+                >
                     {getExitButtonText()}
                 </button>
             </div>
 
             {submissionError && (
-                <p style={{ color: "crimson", marginTop: 0 }}>
+                <p
+                    style={{
+                        color: "var(--color-danger, #fca5a5)",
+                        marginTop: 0,
+                    }}
+                >
                     {submissionError}
                 </p>
             )}
@@ -709,7 +799,7 @@ export default function QuizPlayPage() {
                     style={{
                         position: "fixed",
                         inset: 0,
-                        backgroundColor: "rgba(0, 0, 0, 0.45)",
+                        backgroundColor: "rgba(0, 0, 0, 0.68)",
                         display: "flex",
                         justifyContent: "center",
                         alignItems: "center",
@@ -717,16 +807,7 @@ export default function QuizPlayPage() {
                         padding: 16,
                     }}
                 >
-                    <div
-                        style={{
-                            width: "100%",
-                            maxWidth: 420,
-                            backgroundColor: "#fff",
-                            borderRadius: 12,
-                            padding: 24,
-                            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
-                        }}
-                    >
+                    <div style={modalCardStyle}>
                         <h2 style={{ marginTop: 0 }}>실제 풀이 시간 확인</h2>
 
                         <p style={{ lineHeight: 1.6 }}>
@@ -755,11 +836,7 @@ export default function QuizPlayPage() {
                                         minutes: e.target.value,
                                     }))
                                 }
-                                style={{
-                                    width: 80,
-                                    padding: 8,
-                                    fontSize: 16,
-                                }}
+                                style={inputStyle}
                             />
                             <span>분</span>
 
@@ -774,17 +851,15 @@ export default function QuizPlayPage() {
                                         seconds: e.target.value,
                                     }))
                                 }
-                                style={{
-                                    width: 80,
-                                    padding: 8,
-                                    fontSize: 16,
-                                }}
+                                style={inputStyle}
                             />
                             <span>초</span>
                         </div>
 
                         {timeAdjustError && (
-                            <p style={{ color: "crimson" }}>{timeAdjustError}</p>
+                            <p style={{ color: "var(--color-danger, #fca5a5)" }}>
+                                {timeAdjustError}
+                            </p>
                         )}
 
                         <div
@@ -795,10 +870,18 @@ export default function QuizPlayPage() {
                                 marginTop: 20,
                             }}
                         >
-                            <button onClick={closeTimeAdjustModal} disabled={submitting}>
+                            <button
+                                style={getButtonStyle(submitting)}
+                                onClick={closeTimeAdjustModal}
+                                disabled={submitting}
+                            >
                                 취소
                             </button>
-                            <button onClick={handleTimeAdjustSubmit} disabled={submitting}>
+                            <button
+                                style={getButtonStyle(submitting)}
+                                onClick={handleTimeAdjustSubmit}
+                                disabled={submitting}
+                            >
                                 {submitting ? "제출 중..." : "제출"}
                             </button>
                         </div>
@@ -808,45 +891,10 @@ export default function QuizPlayPage() {
 
             <FabGroup
                 onEdit={goEdit}
-                onToggleBookmark={toggleBookmark}
                 onHome={() => navigate("/")}
                 onToggleMusic={() => setIsMusicOn((v) => !v)}
                 isMusicOn={isMusicOn}
             />
-        </div>
-    );
-}
-
-function ExplanationBlocks({ blocks }) {
-    if (!blocks.length) {
-        return <div style={{ opacity: 0.6 }}>해설이 없습니다.</div>;
-    }
-
-    return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {blocks.map((b, idx) => {
-                if (b.type === "TEXT") {
-                    return <div key={idx}>{b.text}</div>;
-                }
-
-                if (b.type === "IMAGE") {
-                    const img = b.image;
-                    return (
-                        <img
-                            key={img?.imageId ?? idx}
-                            src={img?.url}
-                            alt={img?.alt ?? "explanation"}
-                            style={{ maxWidth: "100%", borderRadius: 8 }}
-                        />
-                    );
-                }
-
-                return (
-                    <div key={idx} style={{ opacity: 0.6 }}>
-                        (지원하지 않는 블록 타입: {String(b.type)})
-                    </div>
-                );
-            })}
         </div>
     );
 }
@@ -866,7 +914,9 @@ function BookmarkToggleButton({ isBookmarked, onClick }) {
                 justifyContent: "center",
                 border: "none",
                 background: "transparent",
-                color: isBookmarked ? "#f59e0b" : "#666",
+                color: isBookmarked
+                    ? "var(--color-primary, #f59e0b)"
+                    : "var(--color-text-muted, #9ca3af)",
                 cursor: "pointer",
                 padding: 0,
                 flexShrink: 0,
