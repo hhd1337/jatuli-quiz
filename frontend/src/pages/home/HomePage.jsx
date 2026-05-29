@@ -289,12 +289,209 @@ function MetricCard({ label, value, description, valueColor = "var(--color-text)
     );
 }
 
+function toggleFolder(folderId) {
+    setCollapsedFolderIds((prev) => {
+        const next = new Set(prev);
+
+        if (next.has(folderId)) {
+            next.delete(folderId);
+        } else {
+            next.add(folderId);
+        }
+
+        return next;
+    });
+}
+
+function getFolderIcon(folder, isCollapsed) {
+    if (folder.leaf) {
+        return folder.totalCount > 0 ? "📝" : "▫️";
+    }
+
+    return isCollapsed ? "▸" : "▾";
+}
+
+function getFolderTypeText(folder) {
+    if (!folder.leaf) {
+        return "폴더";
+    }
+
+    if (folder.totalCount <= 0) {
+        return "문제 없음";
+    }
+
+    return "연습 가능";
+}
+
+function FolderTreeItem({
+                            folder,
+                            depth = 0,
+                            navigate,
+                            collapsedFolderIds,
+                            onToggleFolder,
+                            pathNames = [],
+                            parentFolderId = null,
+                        }) {
+    const children = folder.children ?? [];
+    const hasChildren = children.length > 0;
+    const isCollapsed = collapsedFolderIds.has(folder.folderId);
+    const isPlayableLeaf = folder.leaf && folder.totalCount > 0;
+    const isEmptyLeaf = folder.leaf && folder.totalCount <= 0;
+    const currentPathNames = [...pathNames, folder.name];
+    const titlePath = currentPathNames.join("/");
+
+    function handleClick() {
+        if (hasChildren) {
+            onToggleFolder(folder.folderId);
+            return;
+        }
+
+        if (isPlayableLeaf) {
+            navigate(`/quiz/play?mode=folder&folderId=${folder.folderId}`, {
+                state: {
+                    titlePath,
+                    parentFolderId,
+                },
+            });
+        }
+    }
+
+    return (
+        <div>
+            <button
+                type="button"
+                onClick={handleClick}
+                style={{
+                    width: "100%",
+                    border: "none",
+                    background: "transparent",
+                    color: "var(--color-text)",
+                    padding: "10px 0",
+                    cursor: hasChildren || isPlayableLeaf ? "pointer" : "default",
+                    textAlign: "left",
+                    opacity: isEmptyLeaf ? 0.55 : 1,
+                }}
+            >
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "minmax(0, 1fr) auto",
+                        alignItems: "center",
+                        gap: 12,
+                        paddingLeft: depth * 16,
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            minWidth: 0,
+                        }}
+                    >
+                        <span
+                            aria-hidden="true"
+                            style={{
+                                width: 22,
+                                flexShrink: 0,
+                                color: folder.leaf
+                                    ? "var(--color-text-muted)"
+                                    : "var(--color-primary)",
+                                fontWeight: 900,
+                                textAlign: "center",
+                            }}
+                        >
+                            {getFolderIcon(folder, isCollapsed)}
+                        </span>
+
+                        <strong
+                            style={{
+                                fontSize: depth === 0 ? 17 : 15,
+                                fontWeight: depth === 0 ? 800 : 700,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                            }}
+                        >
+                            {folder.name}
+                        </strong>
+
+                        {isPlayableLeaf && (
+                            <span
+                                style={{
+                                    flexShrink: 0,
+                                    color: "var(--color-primary)",
+                                    fontSize: 12,
+                                    fontWeight: 800,
+                                }}
+                            >
+                                풀기
+                            </span>
+                        )}
+                    </div>
+
+                    <div
+                        style={{
+                            textAlign: "right",
+                            whiteSpace: "nowrap",
+                        }}
+                    >
+                        <div
+                            style={{
+                                color: "var(--color-text)",
+                                fontSize: 14,
+                                fontWeight: 800,
+                            }}
+                        >
+                            {folder.solvedCount} / {folder.totalCount}
+                        </div>
+
+                        <div
+                            style={{
+                                color: "var(--color-text-muted)",
+                                fontSize: 12,
+                                marginTop: 4,
+                            }}
+                        >
+                            {getFolderTypeText(folder)}
+                        </div>
+                    </div>
+                </div>
+            </button>
+
+            {hasChildren && !isCollapsed && (
+                <div
+                    style={{
+                        marginLeft: depth * 16 + 11,
+                        paddingLeft: 12,
+                        borderLeft: "1px solid var(--color-border)",
+                    }}
+                >
+                    {children.map((child) => (
+                        <FolderTreeItem
+                            key={child.folderId}
+                            folder={child}
+                            depth={depth + 1}
+                            navigate={navigate}
+                            collapsedFolderIds={collapsedFolderIds}
+                            onToggleFolder={onToggleFolder}
+                            pathNames={currentPathNames}
+                            parentFolderId={folder.folderId}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function HomePage() {
     const navigate = useNavigate();
 
     const [homeData, setHomeData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [collapsedFolderIds, setCollapsedFolderIds] = useState(() => new Set());
 
     useEffect(() => {
         async function fetchHomeData() {
@@ -740,83 +937,33 @@ export default function HomePage() {
                 ) : (
                     <div
                         style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 10,
+                            ...cardStyle,
+                            padding: "10px 16px",
                         }}
                     >
-                        {rootFolders.map((folder) => {
-                            const folderProgressPercent = getFolderProgressPercent(
-                                folder.solvedCount,
-                                folder.totalCount
-                            );
-
-                            return (
-                                <button
-                                    key={folder.folderId}
-                                    type="button"
-                                    onClick={() => navigate(`/folders/${folder.folderId}`)}
-                                    style={{
-                                        width: "100%",
-                                        textAlign: "left",
-                                        border: "1px solid var(--color-border)",
-                                        background: "var(--color-surface)",
-                                        color: "var(--color-text)",
-                                        borderRadius: 14,
-                                        padding: 16,
-                                        cursor: "pointer",
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "center",
-                                            gap: 12,
-                                            marginBottom: 10,
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: 10,
-                                                minWidth: 0,
-                                            }}
-                                        >
-                                            <span aria-hidden="true">📁</span>
-
-                                            <strong
-                                                style={{
-                                                    fontSize: 16,
-                                                    overflow: "hidden",
-                                                    textOverflow: "ellipsis",
-                                                    whiteSpace: "nowrap",
-                                                }}
-                                            >
-                                                {folder.name}
-                                            </strong>
-                                        </div>
-
-                                        <span
-                                            style={{
-                                                color: "var(--color-text-muted)",
-                                                fontSize: 14,
-                                                whiteSpace: "nowrap",
-                                            }}
-                                        >
-                                            {folder.solvedCount} / {folder.totalCount}
-                                        </span>
-                                    </div>
-
-                                    <ProgressBar
-                                        value={folderProgressPercent}
-                                        height={8}
-                                        ariaLabel={`${folder.name} 문제 풀이 진행률`}
-                                    />
-                                </button>
-                            );
-                        })}
+                        {rootFolders.map((folder, index) => (
+                            <div
+                                key={folder.folderId}
+                                style={{
+                                    borderTop:
+                                        index === 0
+                                            ? "none"
+                                            : "1px solid var(--color-border)",
+                                    paddingTop: index === 0 ? 0 : 6,
+                                    marginTop: index === 0 ? 0 : 6,
+                                }}
+                            >
+                                <FolderTreeItem
+                                    folder={folder}
+                                    depth={0}
+                                    navigate={navigate}
+                                    collapsedFolderIds={collapsedFolderIds}
+                                    onToggleFolder={toggleFolder}
+                                    pathNames={[]}
+                                    parentFolderId={null}
+                                />
+                            </div>
+                        ))}
                     </div>
                 )}
             </section>

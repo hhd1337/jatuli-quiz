@@ -230,7 +230,21 @@ export default function QuizPlayPage() {
 
     const isBookmarkMode = mode === "bookmark";
     const isRandomMode = mode === "random";
-    const isUnsupportedMode = !!mode && !isBookmarkMode && !isRandomMode;
+    const isFolderMode = mode === "folder";
+
+    /**
+     * 중요:
+     * 기존에는 bookmark, random만 지원해서 mode=folder가 unsupported로 처리되었다.
+     * 이제 folder도 정식 지원 모드로 인정한다.
+     *
+     * 또한 과거 URL 호환을 위해 /quiz/play?folderId=9 처럼 mode 없이 folderId만 있는 경우도
+     * 폴더 문제 풀이로 처리한다.
+     */
+    const isLegacyFolderMode = !mode && !!folderId;
+    const isFolderPracticeMode = isFolderMode || isLegacyFolderMode;
+
+    const isUnsupportedMode =
+        !!mode && !isBookmarkMode && !isRandomMode && !isFolderMode;
 
     const initialTitlePath = location.state?.titlePath ?? "";
     const parentFolderId = location.state?.parentFolderId ?? null;
@@ -288,29 +302,71 @@ export default function QuizPlayPage() {
                         ""
                     );
 
-                    setTitlePath(firstProblemPath || "문제 풀이");
+                    setTitlePath(firstProblemPath || "북마크 문제 풀이");
                     setQuestionStartedAt(Date.now());
                     return;
                 }
 
                 if (isRandomMode) {
+                    if (ignore) return;
+
                     setError("랜덤 문제 풀기는 아직 별도 연동 전입니다.");
                     setTitlePath("랜덤 문제 풀기");
                     return;
                 }
 
                 if (isUnsupportedMode) {
+                    if (ignore) return;
+
                     setError(`지원하지 않는 문제 풀이 모드입니다: ${mode}`);
                     setTitlePath("QuizPlayPage");
                     return;
                 }
 
+                /**
+                 * folder 모드 처리
+                 * - /quiz/play?mode=folder&folderId=9
+                 * - /quiz/play?folderId=9
+                 * 둘 다 지원한다.
+                 */
+                if (isFolderPracticeMode) {
+                    if (!folderId) {
+                        if (ignore) return;
+
+                        setError("folderId가 없습니다. leaf 폴더에서 진입해주세요.");
+                        setTitlePath("QuizPlayPage");
+                        return;
+                    }
+
+                    const data = await getFolderPractice(folderId);
+
+                    if (ignore) return;
+
+                    const fetchedProblems = data.problems ?? [];
+
+                    setLocalProblems(fetchedProblems);
+                    setTitlePath(
+                        getPracticeTitlePath(data, initialTitlePath || "문제 풀이")
+                    );
+                    setQuestionStartedAt(Date.now());
+                    return;
+                }
+
+                /**
+                 * mode도 없고 folderId도 없는 경우
+                 */
                 if (!folderId) {
+                    if (ignore) return;
+
                     setError("folderId가 없습니다. leaf 폴더에서 진입해주세요.");
                     setTitlePath("QuizPlayPage");
                     return;
                 }
 
+                /**
+                 * 방어적 fallback:
+                 * 기존 /quiz/play?folderId=9 흐름이 혹시 위 분기를 타지 못해도 동작하도록 유지한다.
+                 */
                 const data = await getFolderPractice(folderId);
 
                 if (ignore) return;
@@ -344,6 +400,9 @@ export default function QuizPlayPage() {
         initialTitlePath,
         isBookmarkMode,
         isRandomMode,
+        isFolderMode,
+        isLegacyFolderMode,
+        isFolderPracticeMode,
         isUnsupportedMode,
     ]);
 
@@ -366,7 +425,7 @@ export default function QuizPlayPage() {
             return;
         }
 
-        navigate(-1);
+        navigate("/");
     };
 
     const getExitButtonText = () => {
@@ -374,7 +433,11 @@ export default function QuizPlayPage() {
             return "홈으로";
         }
 
-        return "폴더 나가기";
+        if (parentFolderId) {
+            return "폴더 나가기";
+        }
+
+        return "홈으로";
     };
 
     const getEmptyMessage = () => {
@@ -580,7 +643,7 @@ export default function QuizPlayPage() {
     if (loading) {
         return (
             <div style={pageStyle}>
-                <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
+                <h1 style={{ margin: 0 }}>{titlePath || "문제 풀이"}</h1>
                 <p style={mutedTextStyle}>문제를 불러오는 중...</p>
             </div>
         );
@@ -594,7 +657,7 @@ export default function QuizPlayPage() {
 
                 {!isBookmarkMode && !isRandomMode && !isUnsupportedMode && !folderId && (
                     <p style={mutedTextStyle}>
-                        예: <code>/quiz/play?folderId=9</code>
+                        예: <code>/quiz/play?mode=folder&amp;folderId=9</code>
                     </p>
                 )}
 
@@ -608,7 +671,7 @@ export default function QuizPlayPage() {
     if (problems.length === 0) {
         return (
             <div style={pageStyle}>
-                <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
+                <h1 style={{ margin: 0 }}>{titlePath || "문제 풀이"}</h1>
                 <p style={mutedTextStyle}>{getEmptyMessage()}</p>
                 <button style={getButtonStyle(false)} onClick={handleExit}>
                     {getExitButtonText()}
