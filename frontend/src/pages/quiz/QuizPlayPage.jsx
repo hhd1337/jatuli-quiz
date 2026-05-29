@@ -53,7 +53,10 @@ function buildPathTextFromItems(items) {
 
 function normalizePathText(value) {
     if (typeof value === "string") {
-        return value.trim();
+        return value
+            .trim()
+            .replace(/^\/+/, "")
+            .replace(/\/+$/, "");
     }
 
     if (Array.isArray(value)) {
@@ -585,7 +588,7 @@ export default function QuizPlayPage() {
                     alignItems: "baseline",
                 }}
             >
-                <h1 style={{ margin: 0 }}>{currentTitlePath}</h1>
+                <h1 style={{ margin: 0, fontSize: 20 }}>{currentTitlePath}  ️[{problem.questionNo}번]</h1>
                 <div style={{ opacity: 0.7 }}>
                     {currentIndex + 1} / {problems.length}
                 </div>
@@ -594,11 +597,8 @@ export default function QuizPlayPage() {
             <hr style={{ margin: "16px 0" }} />
 
             <div style={{ marginBottom: 16 }}>
-                <div style={{ opacity: 0.7, marginBottom: 6 }}>
-                    문제{problem.questionNo}번.
-                </div>
                 <div style={{ fontSize: 18, fontWeight: 600 }}>
-                    {problem.questionText}
+                    💁‍♂ {problem.questionText}
                 </div>
             </div>
 
@@ -625,13 +625,13 @@ export default function QuizPlayPage() {
                     }}
                 >
                     <div style={{ marginBottom: 20 }}>
-                        <div style={{ opacity: 0.7, marginBottom: 6 }}>해설</div>
+                        <div style={{ marginBottom: 6, fontWeight: 600 }}>해설</div>
                         <ExplanationBlocks blocks={problem.explanationBlocks ?? []} />
                     </div>
 
                     <div>
-                        <div style={{ opacity: 0.7, marginBottom: 6 }}>정답</div>
-                        <div style={{ fontWeight: 600 }}>{problem.answerText}</div>
+                        <div style={{ marginBottom: 6, fontWeight: 600 }}>정답</div>
+                        {problem.answerText}
                     </div>
                 </div>
             )}
