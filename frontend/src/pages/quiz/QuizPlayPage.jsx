@@ -462,6 +462,27 @@ export default function QuizPlayPage() {
                 </div>
             )}
 
+            {showAnswer && (
+                <div
+                    style={{
+                        border: "1px solid #ddd",
+                        borderRadius: 12,
+                        padding: 16,
+                        marginBottom: 16,
+                    }}
+                >
+                    <div style={{ marginBottom: 20 }}>
+                        <div style={{ opacity: 0.7, marginBottom: 6 }}>해설</div>
+                        <ExplanationBlocks blocks={problem.explanationBlocks ?? []} />
+                    </div>
+
+                    <div>
+                        <div style={{ opacity: 0.7, marginBottom: 6 }}>정답</div>
+                        <div style={{ fontWeight: 600 }}>{problem.answerText}</div>
+                    </div>
+                </div>
+            )}
+
             <div
                 style={{
                     display: "flex",
@@ -491,20 +512,6 @@ export default function QuizPlayPage() {
                 <p style={{ color: "crimson", marginTop: 0 }}>
                     {submissionError}
                 </p>
-            )}
-
-            {showAnswer && (
-                <div style={{ border: "1px solid #ddd", borderRadius: 12, padding: 16 }}>
-                    <div style={{ marginBottom: 12 }}>
-                        <div style={{ opacity: 0.7, marginBottom: 6 }}>정답</div>
-                        <div style={{ fontWeight: 600 }}>{problem.answerText}</div>
-                    </div>
-
-                    <div>
-                        <div style={{ opacity: 0.7, marginBottom: 6 }}>해설</div>
-                        <ExplanationBlocks blocks={problem.explanationBlocks ?? []} />
-                    </div>
-                </div>
             )}
 
             {timeAdjustModal.open && (
