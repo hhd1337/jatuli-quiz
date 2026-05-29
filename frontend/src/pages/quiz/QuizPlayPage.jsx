@@ -595,7 +595,7 @@ export default function QuizPlayPage() {
 
             <div style={{ marginBottom: 16 }}>
                 <div style={{ opacity: 0.7, marginBottom: 6 }}>
-                    Q{problem.questionNo}
+                    문제{problem.questionNo}번.
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 600 }}>
                     {problem.questionText}
