@@ -588,7 +588,31 @@ export default function QuizPlayPage() {
                     alignItems: "baseline",
                 }}
             >
-                <h1 style={{ margin: 0, fontSize: 20 }}>{currentTitlePath}  ️[{problem.questionNo}번]</h1>
+                {/*<h1 style={{ margin: 0, fontSize: 20 }}>{currentTitlePath}  ️[{problem.questionNo}번]</h1>*/}
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        minWidth: 0,
+                    }}
+                >
+                    <h1
+                        style={{
+                            margin: 0,
+                            fontSize: 20,
+                            lineHeight: 1.4,
+                            wordBreak: "keep-all",
+                        }}
+                    >
+                        {currentTitlePath} [{problem.questionNo}번]
+                    </h1>
+
+                    <BookmarkToggleButton
+                        isBookmarked={!!problem?.meta?.isBookmarked}
+                        onClick={toggleBookmark}
+                    />
+                </div>
                 <div style={{ opacity: 0.7 }}>
                     {currentIndex + 1} / {problems.length}
                 </div>
@@ -772,7 +796,6 @@ export default function QuizPlayPage() {
             <FabGroup
                 onEdit={goEdit}
                 onToggleBookmark={toggleBookmark}
-                isBookmarked={!!problem?.meta?.isBookmarked}
                 onHome={() => navigate("/")}
                 onToggleMusic={() => setIsMusicOn((v) => !v)}
                 isMusicOn={isMusicOn}
@@ -812,5 +835,44 @@ function ExplanationBlocks({ blocks }) {
                 );
             })}
         </div>
+    );
+}
+
+function BookmarkToggleButton({ isBookmarked, onClick }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-label={isBookmarked ? "북마크 해제" : "북마크 추가"}
+            title={isBookmarked ? "북마크 해제" : "북마크 추가"}
+            style={{
+                width: 32,
+                height: 32,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                background: "transparent",
+                color: isBookmarked ? "#f59e0b" : "#666",
+                cursor: "pointer",
+                padding: 0,
+                flexShrink: 0,
+            }}
+        >
+            <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+            >
+                <path
+                    d="M6 4.75C6 3.78 6.78 3 7.75 3h8.5C17.22 3 18 3.78 18 4.75V21l-6-3.75L6 21V4.75Z"
+                    fill={isBookmarked ? "currentColor" : "none"}
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                />
+            </svg>
+        </button>
     );
 }
