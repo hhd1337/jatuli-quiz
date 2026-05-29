@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import { normalizePracticeResponse } from "./problemNormalizer";
 
 function toNonNegativeNumber(value, fallback = 0) {
     const numberValue = Number(value);
@@ -45,64 +46,6 @@ function normalizeFolderChildren(raw) {
     };
 }
 
-function normalizeExplanationToBlocks(explanation) {
-    if (!explanation || typeof explanation !== "string") {
-        return [];
-    }
-
-    return explanation
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((text) => ({
-            type: "TEXT",
-            text,
-        }));
-}
-
-function normalizePracticeProblem(problem, index) {
-    const explanation =
-        problem?.explanation ??
-        problem?.explanationText ??
-        "";
-
-    return {
-        problemId: problem?.problemId ?? null,
-        questionNo: problem?.questionNo ?? problem?.problemNum ?? index + 1,
-        questionText: problem?.question ?? problem?.questionText ?? "",
-        questionImages: Array.isArray(problem?.questionImages)
-            ? problem.questionImages
-            : [],
-        answerText: problem?.answer ?? problem?.answerText ?? "",
-        explanationBlocks: Array.isArray(problem?.explanationBlocks)
-            ? problem.explanationBlocks
-            : normalizeExplanationToBlocks(explanation),
-        meta: {
-            attemptCount: toNonNegativeNumber(
-                problem?.meta?.attemptCount ?? problem?.solvedCount,
-                0
-            ),
-            isBookmarked:
-                problem?.meta?.isBookmarked ??
-                problem?.isBookmarked ??
-                false,
-        },
-    };
-}
-
-function normalizePracticeResponse(raw, folderId) {
-    const problems = Array.isArray(raw?.problems) ? raw.problems : [];
-
-    return {
-        folderId: Number(folderId),
-        titlePath: raw?.titlePath ?? raw?.folderPath ?? "",
-        selectionRule: raw?.selectionRule ?? "ALL",
-        problems: problems.map((problem, index) =>
-            normalizePracticeProblem(problem, index)
-        ),
-    };
-}
-
 export async function getFolderChildren(folderId) {
     const response = await apiClient.get(`/api/v1/folders/${folderId}/children`);
     return normalizeFolderChildren(response.data.result);
@@ -110,5 +53,9 @@ export async function getFolderChildren(folderId) {
 
 export async function getFolderPractice(folderId) {
     const response = await apiClient.get(`/api/v1/folders/${folderId}/practice`);
-    return normalizePracticeResponse(response.data.result, folderId);
+
+    return normalizePracticeResponse(
+        response.data.result,
+        `폴더 ${folderId}`
+    );
 }
