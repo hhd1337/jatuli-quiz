@@ -2,6 +2,46 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getHomeData } from "../../shared/api/homeApi";
 
+const pageStyle = {
+    maxWidth: 800,
+    margin: "0 auto",
+    color: "var(--color-text)",
+};
+
+const cardStyle = {
+    border: "1px solid var(--color-border)",
+    background: "var(--color-surface)",
+    color: "var(--color-text)",
+    borderRadius: 12,
+    padding: 16,
+};
+
+const mutedTextStyle = {
+    color: "var(--color-text-muted)",
+};
+
+const buttonBaseStyle = {
+    border: "1px solid var(--color-border)",
+    background: "var(--color-button-bg)",
+    color: "var(--color-button-text)",
+    padding: "6px 12px",
+    borderRadius: 6,
+};
+
+function getButtonStyle(disabled = false) {
+    return {
+        ...buttonBaseStyle,
+        background: disabled
+            ? "var(--color-button-disabled-bg)"
+            : "var(--color-button-bg)",
+        color: disabled
+            ? "var(--color-button-disabled-text)"
+            : "var(--color-button-text)",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.65 : 1,
+    };
+}
+
 export default function HomePage() {
     const navigate = useNavigate();
 
@@ -30,27 +70,27 @@ export default function HomePage() {
 
     if (loading) {
         return (
-            <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <div style={pageStyle}>
                 <h1>자투리 퀴즈 홈</h1>
-                <p>불러오는 중...</p>
+                <p style={mutedTextStyle}>불러오는 중...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <div style={pageStyle}>
                 <h1>자투리 퀴즈 홈</h1>
-                <p>{error}</p>
+                <p style={{ color: "var(--color-primary)" }}>{error}</p>
             </div>
         );
     }
 
     if (!homeData) {
         return (
-            <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <div style={pageStyle}>
                 <h1>자투리 퀴즈 홈</h1>
-                <p>홈 데이터가 없습니다.</p>
+                <p style={mutedTextStyle}>홈 데이터가 없습니다.</p>
             </div>
         );
     }
@@ -68,15 +108,13 @@ export default function HomePage() {
     const hasBookmarkProblems = bookmarkTotalCount > 0;
 
     return (
-        <div style={{ maxWidth: 800, margin: "0 auto" }}>
+        <div style={pageStyle}>
             <h1>자투리 퀴즈 홈</h1>
 
             {/* ================== 성취 카드 ================== */}
             <div
                 style={{
-                    border: "1px solid #ddd",
-                    borderRadius: 12,
-                    padding: 16,
+                    ...cardStyle,
                     marginBottom: 24,
                     display: "flex",
                     flexDirection: "column",
@@ -102,9 +140,8 @@ export default function HomePage() {
                 {/*        type="button"*/}
                 {/*        onClick={() => navigate("/quiz/play?mode=random")}*/}
                 {/*        style={{*/}
+                {/*            ...getButtonStyle(false),*/}
                 {/*            marginBottom: 16,*/}
-                {/*            padding: "6px 12px",*/}
-                {/*            cursor: "pointer",*/}
                 {/*        }}*/}
                 {/*    >*/}
                 {/*        🎲 {randomAction.label}*/}
@@ -113,9 +150,7 @@ export default function HomePage() {
 
                 <div
                     style={{
-                        border: "1px solid #ddd",
-                        borderRadius: 12,
-                        padding: 16,
+                        ...cardStyle,
                         marginTop: 8,
                     }}
                 >
@@ -129,14 +164,29 @@ export default function HomePage() {
                         }}
                     >
                         <h3 style={{ margin: 0 }}>📦 북마크 문제 전체 순회</h3>
-                        <strong>Level {summary.level}</strong>
+                        <strong style={{ color: "var(--color-primary)" }}>
+                            Level {summary.level}
+                        </strong>
                     </div>
 
-                    <p style={{ marginTop: 0, marginBottom: 8, color: "#555" }}>
+                    <p
+                        style={{
+                            marginTop: 0,
+                            marginBottom: 8,
+                            color: "var(--color-text-muted)",
+                        }}
+                    >
                         북마크된 모든 문제를 한 바퀴 다 풀면 레벨이 1 증가합니다.
                     </p>
 
-                    <p style={{ marginTop: 0, marginBottom: 12, color: "#777", fontSize: 14 }}>
+                    <p
+                        style={{
+                            marginTop: 0,
+                            marginBottom: 12,
+                            color: "var(--color-text-muted)",
+                            fontSize: 14,
+                        }}
+                    >
                         현재 북마크 순회 라운드: {currentBookmarkedRoundNo}회차
                     </p>
 
@@ -144,7 +194,7 @@ export default function HomePage() {
                         style={{
                             width: "100%",
                             height: 14,
-                            backgroundColor: "#eee",
+                            backgroundColor: "var(--color-surface-soft)",
                             borderRadius: 999,
                             overflow: "hidden",
                             marginBottom: 8,
@@ -159,7 +209,7 @@ export default function HomePage() {
                             style={{
                                 width: `${bookmarkProgressPercent}%`,
                                 height: "100%",
-                                backgroundColor: "#22c55e",
+                                backgroundColor: "var(--color-primary)",
                                 transition: "width 0.2s ease",
                             }}
                         />
@@ -172,6 +222,7 @@ export default function HomePage() {
                             alignItems: "center",
                             marginBottom: 12,
                             fontSize: 14,
+                            color: "var(--color-text)",
                         }}
                     >
                         <span>
@@ -184,17 +235,19 @@ export default function HomePage() {
                         type="button"
                         onClick={() => navigate("/quiz/play?mode=bookmark")}
                         disabled={!hasBookmarkProblems}
-                        style={{
-                            padding: "6px 12px",
-                            cursor: hasBookmarkProblems ? "pointer" : "not-allowed",
-                            opacity: hasBookmarkProblems ? 1 : 0.5,
-                        }}
+                        style={getButtonStyle(!hasBookmarkProblems)}
                     >
                         📦 {bookmarkAction?.label ?? "북마크 문제 전체순회"}
                     </button>
 
                     {!hasBookmarkProblems && (
-                        <p style={{ marginBottom: 0, color: "#777", fontSize: 14 }}>
+                        <p
+                            style={{
+                                marginBottom: 0,
+                                color: "var(--color-text-muted)",
+                                fontSize: 14,
+                            }}
+                        >
                             현재 북마크된 문제가 없습니다.
                         </p>
                     )}
@@ -205,7 +258,7 @@ export default function HomePage() {
             <h2>카테고리</h2>
 
             {rootFolders.length === 0 ? (
-                <p>표시할 카테고리가 없습니다.</p>
+                <p style={mutedTextStyle}>표시할 카테고리가 없습니다.</p>
             ) : (
                 <ul style={{ listStyle: "none", padding: 0 }}>
                     {rootFolders.map((folder) => (
@@ -214,7 +267,8 @@ export default function HomePage() {
                             onClick={() => navigate(`/folders/${folder.folderId}`)}
                             style={{
                                 padding: 12,
-                                borderBottom: "1px solid #eee",
+                                borderBottom: "1px solid var(--color-border)",
+                                color: "var(--color-text)",
                                 cursor: "pointer",
                             }}
                         >
