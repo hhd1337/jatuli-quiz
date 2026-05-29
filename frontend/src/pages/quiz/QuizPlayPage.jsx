@@ -21,6 +21,139 @@ function formatDuration(totalSeconds) {
     return `${minutes}분 ${seconds}초`;
 }
 
+function getPathItemName(item) {
+    if (typeof item === "string") {
+        return item.trim();
+    }
+
+    if (!item || typeof item !== "object") {
+        return "";
+    }
+
+    return String(
+        item.name ??
+        item.folderName ??
+        item.title ??
+        item.folderTitle ??
+        item.pathName ??
+        ""
+    ).trim();
+}
+
+function buildPathTextFromItems(items) {
+    if (!Array.isArray(items)) {
+        return "";
+    }
+
+    return items
+        .map(getPathItemName)
+        .filter(Boolean)
+        .join(" / ");
+}
+
+function normalizePathText(value) {
+    if (typeof value === "string") {
+        return value.trim();
+    }
+
+    if (Array.isArray(value)) {
+        return buildPathTextFromItems(value);
+    }
+
+    return "";
+}
+
+function getPracticeTitlePath(data, fallbackTitlePath = "문제 풀이") {
+    const directPathCandidates = [
+        data?.titlePath,
+        data?.folderPath,
+        data?.fullPath,
+        data?.path,
+        data?.folder?.titlePath,
+        data?.folder?.folderPath,
+        data?.folder?.fullPath,
+        data?.folder?.path,
+    ];
+
+    for (const candidate of directPathCandidates) {
+        const pathText = normalizePathText(candidate);
+
+        if (pathText) {
+            return pathText;
+        }
+    }
+
+    const breadcrumbCandidates = [
+        data?.breadcrumbs,
+        data?.breadcrumb,
+        data?.folderBreadcrumbs,
+        data?.folderBreadcrumb,
+        data?.folderPathItems,
+    ];
+
+    for (const candidate of breadcrumbCandidates) {
+        const pathText = buildPathTextFromItems(candidate);
+
+        if (pathText) {
+            return pathText;
+        }
+    }
+
+    return fallbackTitlePath;
+}
+
+function getProblemTitlePath(problem, fallbackTitlePath = "문제 풀이") {
+    const directPathCandidates = [
+        problem?.titlePath,
+        problem?.folderPath,
+        problem?.fullPath,
+        problem?.path,
+        problem?.folderTitlePath,
+        problem?.folderFullPath,
+        problem?.meta?.titlePath,
+        problem?.meta?.folderPath,
+        problem?.meta?.fullPath,
+        problem?.meta?.path,
+        problem?.folder?.titlePath,
+        problem?.folder?.folderPath,
+        problem?.folder?.fullPath,
+        problem?.folder?.path,
+    ];
+
+    for (const candidate of directPathCandidates) {
+        const pathText = normalizePathText(candidate);
+
+        if (pathText) {
+            return pathText;
+        }
+    }
+
+    const breadcrumbCandidates = [
+        problem?.breadcrumbs,
+        problem?.breadcrumb,
+        problem?.folderBreadcrumbs,
+        problem?.folderBreadcrumb,
+        problem?.folderPathItems,
+        problem?.meta?.breadcrumbs,
+        problem?.meta?.breadcrumb,
+        problem?.meta?.folderBreadcrumbs,
+        problem?.meta?.folderBreadcrumb,
+        problem?.meta?.folderPathItems,
+        problem?.folder?.breadcrumbs,
+        problem?.folder?.breadcrumb,
+    ];
+
+    for (const candidate of breadcrumbCandidates) {
+        const pathText = buildPathTextFromItems(candidate);
+
+        if (pathText) {
+            return pathText;
+        }
+    }
+
+    return fallbackTitlePath;
+}
+
 export default function QuizPlayPage() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -78,11 +211,18 @@ export default function QuizPlayPage() {
 
                 if (isBookmarkMode) {
                     const data = await getBookmarkedPractice();
+                    const fetchedProblems = data.problems ?? [];
 
                     if (ignore) return;
 
-                    setLocalProblems(data.problems ?? []);
-                    setTitlePath(data.titlePath ?? "북마크 문제 전체 순회");
+                    setLocalProblems(fetchedProblems);
+
+                    const firstProblemPath = getProblemTitlePath(
+                        fetchedProblems[0],
+                        ""
+                    );
+
+                    setTitlePath(firstProblemPath || "문제 풀이");
                     setQuestionStartedAt(Date.now());
                     return;
                 }
@@ -110,7 +250,9 @@ export default function QuizPlayPage() {
                 if (ignore) return;
 
                 setLocalProblems(data.problems ?? []);
-                setTitlePath(data.titlePath || `폴더 ${folderId}`);
+                setTitlePath(
+                    getPracticeTitlePath(data, initialTitlePath || "문제 풀이")
+                );
                 setQuestionStartedAt(Date.now());
             } catch (err) {
                 if (ignore) return;
@@ -130,7 +272,14 @@ export default function QuizPlayPage() {
         return () => {
             ignore = true;
         };
-    }, [folderId, mode, isBookmarkMode, isRandomMode, isUnsupportedMode]);
+    }, [
+        folderId,
+        mode,
+        initialTitlePath,
+        isBookmarkMode,
+        isRandomMode,
+        isUnsupportedMode,
+    ]);
 
     useEffect(() => {
         if (!loading && problems.length > 0 && !showCompleteScreen) {
@@ -422,6 +571,10 @@ export default function QuizPlayPage() {
     }
 
     const problem = problems[currentIndex];
+    const currentTitlePath = getProblemTitlePath(
+        problem,
+        titlePath || "문제 풀이"
+    );
 
     return (
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
@@ -432,7 +585,7 @@ export default function QuizPlayPage() {
                     alignItems: "baseline",
                 }}
             >
-                <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
+                <h1 style={{ margin: 0 }}>{currentTitlePath}</h1>
                 <div style={{ opacity: 0.7 }}>
                     {currentIndex + 1} / {problems.length}
                 </div>
