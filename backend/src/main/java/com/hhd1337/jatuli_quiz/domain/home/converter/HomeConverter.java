@@ -55,13 +55,17 @@ public class HomeConverter {
     public static HomeResponse.RootFolderItem toRootFolderItem(
             Folder folder,
             int solvedProblemCount,
-            int totalProblemCount
+            int totalProblemCount,
+            boolean leaf,
+            List<HomeResponse.RootFolderItem> children
     ) {
         return HomeResponse.RootFolderItem.builder()
                 .folderId(folder.getFolderId())
                 .name(folder.getName())
                 .solvedProblemCount(solvedProblemCount)
                 .totalProblemCount(totalProblemCount)
+                .leaf(leaf)
+                .children(children)
                 .build();
     }
 
