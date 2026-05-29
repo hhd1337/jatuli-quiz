@@ -17,7 +17,7 @@ function normalizeFolderChildren(raw) {
 
     const titlePath =
         breadcrumb.length > 0
-            ? "/" + breadcrumb.map((item) => item.name).filter(Boolean).join("/")
+            ? breadcrumb.map((item) => item.name).filter(Boolean).join("/")
             : "/";
 
     return {
@@ -27,7 +27,6 @@ function normalizeFolderChildren(raw) {
         sections: [
             {
                 sectionId: "children",
-                title: "하위 폴더",
                 children: folders.map((folder) => ({
                     folderId: folder.folderId,
                     name: folder.name ?? "",
