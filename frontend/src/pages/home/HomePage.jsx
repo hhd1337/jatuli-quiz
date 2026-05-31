@@ -345,7 +345,7 @@ function getFolderIcon(folder, isCollapsed) {
         return folder.totalCount > 0 ? "🔘" : "◌";
     }
 
-    return isCollapsed ? "▶" : "▼";
+    return isCollapsed ? "📁" : "📂";
 }
 
 function FolderTreeItem({
