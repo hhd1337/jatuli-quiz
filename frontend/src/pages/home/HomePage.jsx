@@ -380,6 +380,10 @@ function FolderTreeItem({
     const currentPathNames = [...pathNames, folder.name];
     const titlePath = currentPathNames.join("/");
 
+    const totalCount = Number(folder.totalCount ?? 0);
+    const hasOwnProblems = isLeaf && totalCount > 0;
+    const canAddChildFolder = !hasOwnProblems;
+
     function handleClick() {
         if (hasChildren) {
             onToggleFolder(folder.folderId);
@@ -481,13 +485,15 @@ function FolderTreeItem({
                             flexShrink: 0,
                         }}
                     >
-                        <button
-                            type="button"
-                            onClick={() => onStartCreateFolder(folder, titlePath)}
-                            style={folderActionButtonStyle}
-                        >
-                            + 폴더
-                        </button>
+                        {canAddChildFolder && (
+                            <button
+                                type="button"
+                                onClick={() => onStartCreateFolder(folder, titlePath)}
+                                style={folderActionButtonStyle}
+                            >
+                                + 폴더
+                            </button>
+                        )}
 
                         {isLeaf && (
                             <button
@@ -701,6 +707,14 @@ export default function HomePage() {
     }
 
     function handleStartCreateFolder(folder, titlePath) {
+        const isLeaf = folder.leaf ?? folder.isLeaf ?? false;
+        const totalCount = Number(folder.totalCount ?? 0);
+
+        if (isLeaf && totalCount > 0) {
+            alert("이미 문제가 있는 폴더 아래에는 하위 폴더를 만들 수 없습니다.");
+            return;
+        }
+
         setCreatingParentFolder({
             folderId: folder.folderId,
             titlePath,
