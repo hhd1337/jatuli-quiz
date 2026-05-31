@@ -289,38 +289,12 @@ function MetricCard({ label, value, description, valueColor = "var(--color-text)
     );
 }
 
-function toggleFolder(folderId) {
-    setCollapsedFolderIds((prev) => {
-        const next = new Set(prev);
-
-        if (next.has(folderId)) {
-            next.delete(folderId);
-        } else {
-            next.add(folderId);
-        }
-
-        return next;
-    });
-}
-
 function getFolderIcon(folder, isCollapsed) {
     if (folder.leaf) {
-        return folder.totalCount > 0 ? "📝" : "▫️";
+        return folder.totalCount > 0 ? "🔘" : "◌";
     }
 
-    return isCollapsed ? "▸" : "▾";
-}
-
-function getFolderTypeText(folder) {
-    if (!folder.leaf) {
-        return "폴더";
-    }
-
-    if (folder.totalCount <= 0) {
-        return "문제 없음";
-    }
-
-    return "연습 가능";
+    return isCollapsed ? "▶" : "▼";
 }
 
 function FolderTreeItem({
@@ -421,40 +395,13 @@ function FolderTreeItem({
                                 style={{
                                     flexShrink: 0,
                                     color: "var(--color-primary)",
-                                    fontSize: 12,
-                                    fontWeight: 800,
+                                    fontSize: 15,
+                                    fontWeight: 400,
                                 }}
                             >
-                                풀기
+                                {folder.solvedCount}/{folder.totalCount}
                             </span>
                         )}
-                    </div>
-
-                    <div
-                        style={{
-                            textAlign: "right",
-                            whiteSpace: "nowrap",
-                        }}
-                    >
-                        <div
-                            style={{
-                                color: "var(--color-text)",
-                                fontSize: 14,
-                                fontWeight: 800,
-                            }}
-                        >
-                            {folder.solvedCount} / {folder.totalCount}
-                        </div>
-
-                        <div
-                            style={{
-                                color: "var(--color-text-muted)",
-                                fontSize: 12,
-                                marginTop: 4,
-                            }}
-                        >
-                            {getFolderTypeText(folder)}
-                        </div>
                     </div>
                 </div>
             </button>
@@ -492,6 +439,20 @@ export default function HomePage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [collapsedFolderIds, setCollapsedFolderIds] = useState(() => new Set());
+
+    function toggleFolder(folderId) {
+        setCollapsedFolderIds((prev) => {
+            const next = new Set(prev);
+
+            if (next.has(folderId)) {
+                next.delete(folderId);
+            } else {
+                next.add(folderId);
+            }
+
+            return next;
+        });
+    }
 
     useEffect(() => {
         async function fetchHomeData() {
