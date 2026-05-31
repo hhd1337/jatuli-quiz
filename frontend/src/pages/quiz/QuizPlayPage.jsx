@@ -6,8 +6,71 @@ import {
     submitProblemSubmission,
 } from "../../shared/api/quizApi";
 import FabGroup from "../../features/fab/FabGroup";
+import MarkdownContent from "../../shared/components/MarkdownContent";
 
 const TEN_MINUTES_IN_SECONDS = 10 * 60;
+
+const pageStyle = {
+    maxWidth: 800,
+    margin: "0 auto",
+    color: "var(--color-text, #f9fafb)",
+};
+
+const mutedTextStyle = {
+    color: "var(--color-text-muted, #9ca3af)",
+};
+
+const hrStyle = {
+    margin: "16px 0",
+    border: "none",
+    borderTop: "1px solid var(--color-border, #374151)",
+};
+
+const answerCardStyle = {
+    border: "1px solid var(--color-border, #374151)",
+    background: "var(--color-surface, #1f2937)",
+    color: "var(--color-text, #f9fafb)",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+};
+
+const modalCardStyle = {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: "var(--color-surface, #1f2937)",
+    color: "var(--color-text, #f9fafb)",
+    border: "1px solid var(--color-border, #374151)",
+    borderRadius: 12,
+    padding: 24,
+    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.35)",
+};
+
+const inputStyle = {
+    width: 80,
+    padding: 8,
+    fontSize: 16,
+    background: "var(--color-bg, #111827)",
+    color: "var(--color-text, #f9fafb)",
+    border: "1px solid var(--color-border, #374151)",
+    borderRadius: 6,
+};
+
+function getButtonStyle(disabled = false) {
+    return {
+        border: "1px solid var(--color-border, #374151)",
+        background: disabled
+            ? "var(--color-button-disabled-bg, #1f2937)"
+            : "var(--color-button-bg, #374151)",
+        color: disabled
+            ? "var(--color-button-disabled-text, #6b7280)"
+            : "var(--color-button-text, #f9fafb)",
+        padding: "6px 10px",
+        borderRadius: 6,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.65 : 1,
+    };
+}
 
 function getNowSeconds(startedAt) {
     return Math.max(1, Math.floor((Date.now() - startedAt) / 1000));
@@ -21,6 +84,142 @@ function formatDuration(totalSeconds) {
     return `${minutes}분 ${seconds}초`;
 }
 
+function getPathItemName(item) {
+    if (typeof item === "string") {
+        return item.trim();
+    }
+
+    if (!item || typeof item !== "object") {
+        return "";
+    }
+
+    return String(
+        item.name ??
+        item.folderName ??
+        item.title ??
+        item.folderTitle ??
+        item.pathName ??
+        ""
+    ).trim();
+}
+
+function buildPathTextFromItems(items) {
+    if (!Array.isArray(items)) {
+        return "";
+    }
+
+    return items
+        .map(getPathItemName)
+        .filter(Boolean)
+        .join(" / ");
+}
+
+function normalizePathText(value) {
+    if (typeof value === "string") {
+        return value
+            .trim()
+            .replace(/^\/+/, "")
+            .replace(/\/+$/, "");
+    }
+
+    if (Array.isArray(value)) {
+        return buildPathTextFromItems(value);
+    }
+
+    return "";
+}
+
+function getPracticeTitlePath(data, fallbackTitlePath = "문제 풀이") {
+    const directPathCandidates = [
+        data?.titlePath,
+        data?.folderPath,
+        data?.fullPath,
+        data?.path,
+        data?.folder?.titlePath,
+        data?.folder?.folderPath,
+        data?.folder?.fullPath,
+        data?.folder?.path,
+    ];
+
+    for (const candidate of directPathCandidates) {
+        const pathText = normalizePathText(candidate);
+
+        if (pathText) {
+            return pathText;
+        }
+    }
+
+    const breadcrumbCandidates = [
+        data?.breadcrumbs,
+        data?.breadcrumb,
+        data?.folderBreadcrumbs,
+        data?.folderBreadcrumb,
+        data?.folderPathItems,
+    ];
+
+    for (const candidate of breadcrumbCandidates) {
+        const pathText = buildPathTextFromItems(candidate);
+
+        if (pathText) {
+            return pathText;
+        }
+    }
+
+    return normalizePathText(fallbackTitlePath) || "문제 풀이";
+}
+
+function getProblemTitlePath(problem, fallbackTitlePath = "문제 풀이") {
+    const directPathCandidates = [
+        problem?.titlePath,
+        problem?.folderPath,
+        problem?.fullPath,
+        problem?.path,
+        problem?.folderTitlePath,
+        problem?.folderFullPath,
+        problem?.meta?.titlePath,
+        problem?.meta?.folderPath,
+        problem?.meta?.fullPath,
+        problem?.meta?.path,
+        problem?.folder?.titlePath,
+        problem?.folder?.folderPath,
+        problem?.folder?.fullPath,
+        problem?.folder?.path,
+    ];
+
+    for (const candidate of directPathCandidates) {
+        const pathText = normalizePathText(candidate);
+
+        if (pathText) {
+            return pathText;
+        }
+    }
+
+    const breadcrumbCandidates = [
+        problem?.breadcrumbs,
+        problem?.breadcrumb,
+        problem?.folderBreadcrumbs,
+        problem?.folderBreadcrumb,
+        problem?.folderPathItems,
+        problem?.meta?.breadcrumbs,
+        problem?.meta?.breadcrumb,
+        problem?.meta?.folderBreadcrumbs,
+        problem?.meta?.folderBreadcrumb,
+        problem?.meta?.folderPathItems,
+        problem?.folder?.breadcrumbs,
+        problem?.folder?.breadcrumb,
+    ];
+
+    for (const candidate of breadcrumbCandidates) {
+        const pathText = buildPathTextFromItems(candidate);
+
+        if (pathText) {
+            return pathText;
+        }
+    }
+
+    return normalizePathText(fallbackTitlePath) || "문제 풀이";
+}
+
 export default function QuizPlayPage() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -31,7 +230,21 @@ export default function QuizPlayPage() {
 
     const isBookmarkMode = mode === "bookmark";
     const isRandomMode = mode === "random";
-    const isUnsupportedMode = !!mode && !isBookmarkMode && !isRandomMode;
+    const isFolderMode = mode === "folder";
+
+    /**
+     * 중요:
+     * 기존에는 bookmark, random만 지원해서 mode=folder가 unsupported로 처리되었다.
+     * 이제 folder도 정식 지원 모드로 인정한다.
+     *
+     * 또한 과거 URL 호환을 위해 /quiz/play?folderId=9 처럼 mode 없이 folderId만 있는 경우도
+     * 폴더 문제 풀이로 처리한다.
+     */
+    const isLegacyFolderMode = !mode && !!folderId;
+    const isFolderPracticeMode = isFolderMode || isLegacyFolderMode;
+
+    const isUnsupportedMode =
+        !!mode && !isBookmarkMode && !isRandomMode && !isFolderMode;
 
     const initialTitlePath = location.state?.titlePath ?? "";
     const parentFolderId = location.state?.parentFolderId ?? null;
@@ -78,39 +291,90 @@ export default function QuizPlayPage() {
 
                 if (isBookmarkMode) {
                     const data = await getBookmarkedPractice();
+                    const fetchedProblems = data.problems ?? [];
 
                     if (ignore) return;
 
-                    setLocalProblems(data.problems ?? []);
-                    setTitlePath(data.titlePath ?? "북마크 문제 전체 순회");
+                    setLocalProblems(fetchedProblems);
+
+                    const firstProblemPath = getProblemTitlePath(
+                        fetchedProblems[0],
+                        ""
+                    );
+
+                    setTitlePath(firstProblemPath || "북마크 문제 풀이");
                     setQuestionStartedAt(Date.now());
                     return;
                 }
 
                 if (isRandomMode) {
+                    if (ignore) return;
+
                     setError("랜덤 문제 풀기는 아직 별도 연동 전입니다.");
                     setTitlePath("랜덤 문제 풀기");
                     return;
                 }
 
                 if (isUnsupportedMode) {
+                    if (ignore) return;
+
                     setError(`지원하지 않는 문제 풀이 모드입니다: ${mode}`);
                     setTitlePath("QuizPlayPage");
                     return;
                 }
 
+                /**
+                 * folder 모드 처리
+                 * - /quiz/play?mode=folder&folderId=9
+                 * - /quiz/play?folderId=9
+                 * 둘 다 지원한다.
+                 */
+                if (isFolderPracticeMode) {
+                    if (!folderId) {
+                        if (ignore) return;
+
+                        setError("folderId가 없습니다. leaf 폴더에서 진입해주세요.");
+                        setTitlePath("QuizPlayPage");
+                        return;
+                    }
+
+                    const data = await getFolderPractice(folderId);
+
+                    if (ignore) return;
+
+                    const fetchedProblems = data.problems ?? [];
+
+                    setLocalProblems(fetchedProblems);
+                    setTitlePath(
+                        getPracticeTitlePath(data, initialTitlePath || "문제 풀이")
+                    );
+                    setQuestionStartedAt(Date.now());
+                    return;
+                }
+
+                /**
+                 * mode도 없고 folderId도 없는 경우
+                 */
                 if (!folderId) {
+                    if (ignore) return;
+
                     setError("folderId가 없습니다. leaf 폴더에서 진입해주세요.");
                     setTitlePath("QuizPlayPage");
                     return;
                 }
 
+                /**
+                 * 방어적 fallback:
+                 * 기존 /quiz/play?folderId=9 흐름이 혹시 위 분기를 타지 못해도 동작하도록 유지한다.
+                 */
                 const data = await getFolderPractice(folderId);
 
                 if (ignore) return;
 
                 setLocalProblems(data.problems ?? []);
-                setTitlePath(data.titlePath || `폴더 ${folderId}`);
+                setTitlePath(
+                    getPracticeTitlePath(data, initialTitlePath || "문제 풀이")
+                );
                 setQuestionStartedAt(Date.now());
             } catch (err) {
                 if (ignore) return;
@@ -130,7 +394,17 @@ export default function QuizPlayPage() {
         return () => {
             ignore = true;
         };
-    }, [folderId, mode, isBookmarkMode, isRandomMode, isUnsupportedMode]);
+    }, [
+        folderId,
+        mode,
+        initialTitlePath,
+        isBookmarkMode,
+        isRandomMode,
+        isFolderMode,
+        isLegacyFolderMode,
+        isFolderPracticeMode,
+        isUnsupportedMode,
+    ]);
 
     useEffect(() => {
         if (!loading && problems.length > 0 && !showCompleteScreen) {
@@ -151,7 +425,7 @@ export default function QuizPlayPage() {
             return;
         }
 
-        navigate(-1);
+        navigate("/");
     };
 
     const getExitButtonText = () => {
@@ -159,7 +433,11 @@ export default function QuizPlayPage() {
             return "홈으로";
         }
 
-        return "폴더 나가기";
+        if (parentFolderId) {
+            return "폴더 나가기";
+        }
+
+        return "홈으로";
     };
 
     const getEmptyMessage = () => {
@@ -364,36 +642,40 @@ export default function QuizPlayPage() {
 
     if (loading) {
         return (
-            <div style={{ maxWidth: 800, margin: "0 auto" }}>
-                <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
-                <p>문제를 불러오는 중...</p>
+            <div style={pageStyle}>
+                <h1 style={{ margin: 0 }}>{titlePath || "문제 풀이"}</h1>
+                <p style={mutedTextStyle}>문제를 불러오는 중...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <div style={pageStyle}>
                 <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
-                <p>{error}</p>
+                <p style={{ color: "var(--color-danger, #fca5a5)" }}>{error}</p>
 
                 {!isBookmarkMode && !isRandomMode && !isUnsupportedMode && !folderId && (
-                    <p style={{ opacity: 0.7 }}>
-                        예: <code>/quiz/play?folderId=9</code>
+                    <p style={mutedTextStyle}>
+                        예: <code>/quiz/play?mode=folder&amp;folderId=9</code>
                     </p>
                 )}
 
-                <button onClick={handleExit}>{getExitButtonText()}</button>
+                <button style={getButtonStyle(false)} onClick={handleExit}>
+                    {getExitButtonText()}
+                </button>
             </div>
         );
     }
 
     if (problems.length === 0) {
         return (
-            <div style={{ maxWidth: 800, margin: "0 auto" }}>
-                <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
-                <p>{getEmptyMessage()}</p>
-                <button onClick={handleExit}>{getExitButtonText()}</button>
+            <div style={pageStyle}>
+                <h1 style={{ margin: 0 }}>{titlePath || "문제 풀이"}</h1>
+                <p style={mutedTextStyle}>{getEmptyMessage()}</p>
+                <button style={getButtonStyle(false)} onClick={handleExit}>
+                    {getExitButtonText()}
+                </button>
             </div>
         );
     }
@@ -402,8 +684,7 @@ export default function QuizPlayPage() {
         return (
             <div
                 style={{
-                    maxWidth: 800,
-                    margin: "0 auto",
+                    ...pageStyle,
                     minHeight: "60vh",
                     display: "flex",
                     flexDirection: "column",
@@ -415,37 +696,81 @@ export default function QuizPlayPage() {
             >
                 <div style={{ fontSize: 64 }}>🎉</div>
                 <h1 style={{ margin: 0 }}>모두 풀었습니다!</h1>
-                <p style={{ opacity: 0.8 }}>{getCompleteMessage()}</p>
-                <button onClick={handleExit}>{getExitButtonText()}</button>
+                <p style={mutedTextStyle}>{getCompleteMessage()}</p>
+                <button style={getButtonStyle(false)} onClick={handleExit}>
+                    {getExitButtonText()}
+                </button>
             </div>
         );
     }
 
     const problem = problems[currentIndex];
+    const currentTitlePath = getProblemTitlePath(
+        problem,
+        titlePath || "문제 풀이"
+    );
+
+    const isPrevDisabled = currentIndex === 0 || submitting;
+    const isNextDisabled = submitting;
+    const isExitDisabled = submitting;
 
     return (
-        <div style={{ maxWidth: 800, margin: "0 auto" }}>
+        <div style={pageStyle}>
             <div
                 style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "baseline",
+                    gap: 16,
                 }}
             >
-                <h1 style={{ margin: 0 }}>{titlePath || "QuizPlayPage"}</h1>
-                <div style={{ opacity: 0.7 }}>
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        minWidth: 0,
+                    }}
+                >
+                    <h1
+                        style={{
+                            margin: 0,
+                            fontSize: 20,
+                            lineHeight: 1.4,
+                            wordBreak: "keep-all",
+                        }}
+                    >
+                        {currentTitlePath} [{problem.questionNo}번]
+                    </h1>
+
+                    <BookmarkToggleButton
+                        isBookmarked={!!problem?.meta?.isBookmarked}
+                        onClick={toggleBookmark}
+                    />
+                </div>
+
+                <div style={mutedTextStyle}>
                     {currentIndex + 1} / {problems.length}
                 </div>
             </div>
 
-            <hr style={{ margin: "16px 0" }} />
+            <hr style={hrStyle} />
 
             <div style={{ marginBottom: 16 }}>
-                <div style={{ opacity: 0.7, marginBottom: 6 }}>
-                    Q{problem.questionNo}
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 600 }}>
-                    {problem.questionText}
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 6,
+                        fontSize: 18,
+                        fontWeight: 600,
+                    }}
+                >
+                    <span style={{ flexShrink: 0, lineHeight: 1.7 }}>💁‍♂</span>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <MarkdownContent value={problem.questionText} />
+                    </div>
                 </div>
             </div>
 
@@ -456,9 +781,28 @@ export default function QuizPlayPage() {
                             key={img.imageId ?? idx}
                             src={img.url}
                             alt={img.alt ?? "question"}
-                            style={{ maxWidth: "100%", borderRadius: 8, marginBottom: 8 }}
+                            style={{
+                                maxWidth: "100%",
+                                borderRadius: 8,
+                                marginBottom: 8,
+                                border: "1px solid var(--color-border, #374151)",
+                            }}
                         />
                     ))}
+                </div>
+            )}
+
+            {showAnswer && (
+                <div style={answerCardStyle}>
+                    <div style={{ marginBottom: 20 }}>
+                        <div style={{ marginBottom: 6, fontWeight: 600 }}>해설</div>
+                        <MarkdownContent value={problem.explanationText} />
+                    </div>
+
+                    <div>
+                        <div style={{ marginBottom: 6, fontWeight: 600 }}>정답</div>
+                        <MarkdownContent value={problem.answerText} />
+                    </div>
                 </div>
             )}
 
@@ -470,41 +814,47 @@ export default function QuizPlayPage() {
                     flexWrap: "wrap",
                 }}
             >
-                <button onClick={() => setShowAnswer((v) => !v)}>
+                <button
+                    style={getButtonStyle(false)}
+                    onClick={() => setShowAnswer((v) => !v)}
+                >
                     {showAnswer ? "정답/해설 숨기기" : "정답/해설 보기"}
                 </button>
 
-                <button onClick={goPrev} disabled={currentIndex === 0 || submitting}>
+                <button
+                    style={getButtonStyle(isPrevDisabled)}
+                    onClick={goPrev}
+                    disabled={isPrevDisabled}
+                >
                     이전 문제
                 </button>
 
-                <button onClick={handleNextClick} disabled={submitting}>
+                <button
+                    style={getButtonStyle(isNextDisabled)}
+                    onClick={handleNextClick}
+                    disabled={isNextDisabled}
+                >
                     {submitting ? "제출 중..." : "다음 문제"}
                 </button>
 
-                <button onClick={handleExit} disabled={submitting}>
+                <button
+                    style={getButtonStyle(isExitDisabled)}
+                    onClick={handleExit}
+                    disabled={isExitDisabled}
+                >
                     {getExitButtonText()}
                 </button>
             </div>
 
             {submissionError && (
-                <p style={{ color: "crimson", marginTop: 0 }}>
+                <p
+                    style={{
+                        color: "var(--color-danger, #fca5a5)",
+                        marginTop: 0,
+                    }}
+                >
                     {submissionError}
                 </p>
-            )}
-
-            {showAnswer && (
-                <div style={{ border: "1px solid #ddd", borderRadius: 12, padding: 16 }}>
-                    <div style={{ marginBottom: 12 }}>
-                        <div style={{ opacity: 0.7, marginBottom: 6 }}>정답</div>
-                        <div style={{ fontWeight: 600 }}>{problem.answerText}</div>
-                    </div>
-
-                    <div>
-                        <div style={{ opacity: 0.7, marginBottom: 6 }}>해설</div>
-                        <ExplanationBlocks blocks={problem.explanationBlocks ?? []} />
-                    </div>
-                </div>
             )}
 
             {timeAdjustModal.open && (
@@ -512,7 +862,7 @@ export default function QuizPlayPage() {
                     style={{
                         position: "fixed",
                         inset: 0,
-                        backgroundColor: "rgba(0, 0, 0, 0.45)",
+                        backgroundColor: "rgba(0, 0, 0, 0.68)",
                         display: "flex",
                         justifyContent: "center",
                         alignItems: "center",
@@ -520,16 +870,7 @@ export default function QuizPlayPage() {
                         padding: 16,
                     }}
                 >
-                    <div
-                        style={{
-                            width: "100%",
-                            maxWidth: 420,
-                            backgroundColor: "#fff",
-                            borderRadius: 12,
-                            padding: 24,
-                            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
-                        }}
-                    >
+                    <div style={modalCardStyle}>
                         <h2 style={{ marginTop: 0 }}>실제 풀이 시간 확인</h2>
 
                         <p style={{ lineHeight: 1.6 }}>
@@ -558,11 +899,7 @@ export default function QuizPlayPage() {
                                         minutes: e.target.value,
                                     }))
                                 }
-                                style={{
-                                    width: 80,
-                                    padding: 8,
-                                    fontSize: 16,
-                                }}
+                                style={inputStyle}
                             />
                             <span>분</span>
 
@@ -577,17 +914,15 @@ export default function QuizPlayPage() {
                                         seconds: e.target.value,
                                     }))
                                 }
-                                style={{
-                                    width: 80,
-                                    padding: 8,
-                                    fontSize: 16,
-                                }}
+                                style={inputStyle}
                             />
                             <span>초</span>
                         </div>
 
                         {timeAdjustError && (
-                            <p style={{ color: "crimson" }}>{timeAdjustError}</p>
+                            <p style={{ color: "var(--color-danger, #fca5a5)" }}>
+                                {timeAdjustError}
+                            </p>
                         )}
 
                         <div
@@ -598,10 +933,18 @@ export default function QuizPlayPage() {
                                 marginTop: 20,
                             }}
                         >
-                            <button onClick={closeTimeAdjustModal} disabled={submitting}>
+                            <button
+                                style={getButtonStyle(submitting)}
+                                onClick={closeTimeAdjustModal}
+                                disabled={submitting}
+                            >
                                 취소
                             </button>
-                            <button onClick={handleTimeAdjustSubmit} disabled={submitting}>
+                            <button
+                                style={getButtonStyle(submitting)}
+                                onClick={handleTimeAdjustSubmit}
+                                disabled={submitting}
+                            >
                                 {submitting ? "제출 중..." : "제출"}
                             </button>
                         </div>
@@ -611,8 +954,6 @@ export default function QuizPlayPage() {
 
             <FabGroup
                 onEdit={goEdit}
-                onToggleBookmark={toggleBookmark}
-                isBookmarked={!!problem?.meta?.isBookmarked}
                 onHome={() => navigate("/")}
                 onToggleMusic={() => setIsMusicOn((v) => !v)}
                 isMusicOn={isMusicOn}
@@ -621,36 +962,43 @@ export default function QuizPlayPage() {
     );
 }
 
-function ExplanationBlocks({ blocks }) {
-    if (!blocks.length) {
-        return <div style={{ opacity: 0.6 }}>해설이 없습니다.</div>;
-    }
-
+function BookmarkToggleButton({ isBookmarked, onClick }) {
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {blocks.map((b, idx) => {
-                if (b.type === "TEXT") {
-                    return <div key={idx}>{b.text}</div>;
-                }
-
-                if (b.type === "IMAGE") {
-                    const img = b.image;
-                    return (
-                        <img
-                            key={img?.imageId ?? idx}
-                            src={img?.url}
-                            alt={img?.alt ?? "explanation"}
-                            style={{ maxWidth: "100%", borderRadius: 8 }}
-                        />
-                    );
-                }
-
-                return (
-                    <div key={idx} style={{ opacity: 0.6 }}>
-                        (지원하지 않는 블록 타입: {String(b.type)})
-                    </div>
-                );
-            })}
-        </div>
+        <button
+            type="button"
+            onClick={onClick}
+            aria-label={isBookmarked ? "북마크 해제" : "북마크 추가"}
+            title={isBookmarked ? "북마크 해제" : "북마크 추가"}
+            style={{
+                width: 32,
+                height: 32,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                background: "transparent",
+                color: isBookmarked
+                    ? "var(--color-primary, #f59e0b)"
+                    : "var(--color-text-muted, #9ca3af)",
+                cursor: "pointer",
+                padding: 0,
+                flexShrink: 0,
+            }}
+        >
+            <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+            >
+                <path
+                    d="M6 4.75C6 3.78 6.78 3 7.75 3h8.5C17.22 3 18 3.78 18 4.75V21l-6-3.75L6 21V4.75Z"
+                    fill={isBookmarked ? "currentColor" : "none"}
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                />
+            </svg>
+        </button>
     );
 }

@@ -34,6 +34,21 @@ function toNonNegativeNumber(value, fallback = 0) {
     return Math.max(0, Math.floor(numberValue));
 }
 
+function normalizeFolderTree(folder) {
+    const children = Array.isArray(folder?.children)
+        ? folder.children.map(normalizeFolderTree)
+        : [];
+
+    return {
+        folderId: folder?.folderId,
+        name: folder?.name ?? "",
+        solvedCount: folder?.solvedProblemCount ?? 0,
+        totalCount: folder?.totalProblemCount ?? 0,
+        leaf: Boolean(folder?.leaf),
+        children,
+    };
+}
+
 function normalizeHomeResponse(raw) {
     const achievementCard = raw?.achievementCard ?? {};
     const bookmarkCycleProgress = raw?.bookmarkCycleProgress ?? {};
@@ -98,12 +113,7 @@ function normalizeHomeResponse(raw) {
                     currentCycleSolvedProblemCount >= totalBookmarkedProblemCount,
             },
         },
-        rootFolders: rootFolders.map((folder) => ({
-            folderId: folder.folderId,
-            name: folder.name ?? "",
-            solvedCount: folder.solvedProblemCount ?? 0,
-            totalCount: folder.totalProblemCount ?? 0,
-        })),
+        rootFolders: rootFolders.map(normalizeFolderTree),
         quickActions: [
             { key: "RANDOM", label: "랜덤 문제 풀기" },
             { key: "BOOKMARK", label: "북마크 문제 전체순회 시작" },

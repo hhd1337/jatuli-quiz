@@ -48,5 +48,11 @@ public class HomeResponse {
         private String name;
         private Integer solvedProblemCount;
         private Integer totalProblemCount;
+
+        // 하위 폴더가 없으면 true
+        private Boolean leaf;
+
+        // 하위 폴더 목록
+        private List<RootFolderItem> children;
     }
 }

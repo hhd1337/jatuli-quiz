@@ -74,10 +74,12 @@ public class HomeQueryServiceImpl implements HomeQueryService {
         HomeResponse.BookmarkCycleProgress bookmarkCycleProgress =
                 getBookmarkCycleProgress(learningProgress);
 
-        List<Folder> rootFolders = folderRepository.findAllByParentFolder_FolderIdOrderByFolderIdAsc(ROOT_FOLDER_ID);
+        List<Folder> rootFolders =
+                folderRepository.findAllByParentFolder_FolderIdOrderByFolderIdAsc(ROOT_FOLDER_ID);
 
         List<HomeResponse.RootFolderItem> rootFolderItems = rootFolders.stream()
-                .map(this::toRootFolderItem)
+                .map(this::buildFolderTreeItem)
+                .map(FolderTreeBuildResult::item)
                 .toList();
 
         return HomeConverter.toGetHomeResponse(
@@ -128,31 +130,57 @@ public class HomeQueryServiceImpl implements HomeQueryService {
         );
     }
 
-    private HomeResponse.RootFolderItem toRootFolderItem(Folder folder) {
-        FolderStats stats = calculateFolderStats(folder);
+    private FolderTreeBuildResult buildFolderTreeItem(Folder folder) {
+        int ownTotalProblemCount = problemRepository.countByFolder(folder);
+        int ownSolvedProblemCount = problemRepository.countByFolderAndSolvedCountGreaterThan(folder, 0);
 
-        return HomeConverter.toRootFolderItem(
+        List<Folder> childFolders =
+                folderRepository.findAllByParentFolder_FolderIdOrderByFolderIdAsc(folder.getFolderId());
+
+        List<FolderTreeBuildResult> childResults = childFolders.stream()
+                .map(this::buildFolderTreeItem)
+                .toList();
+
+        int childrenTotalProblemCount = childResults.stream()
+                .mapToInt(result -> result.stats().total())
+                .sum();
+
+        int childrenSolvedProblemCount = childResults.stream()
+                .mapToInt(result -> result.stats().solved())
+                .sum();
+
+        int totalProblemCount = ownTotalProblemCount + childrenTotalProblemCount;
+        int solvedProblemCount = ownSolvedProblemCount + childrenSolvedProblemCount;
+
+        List<HomeResponse.RootFolderItem> children = childResults.stream()
+                .map(FolderTreeBuildResult::item)
+                .toList();
+
+        boolean leaf = childFolders.isEmpty();
+
+        HomeResponse.RootFolderItem item = HomeConverter.toRootFolderItem(
                 folder,
-                stats.solved(),
-                stats.total()
+                solvedProblemCount,
+                totalProblemCount,
+                leaf,
+                children
+        );
+
+        return new FolderTreeBuildResult(
+                item,
+                new FolderStats(totalProblemCount, solvedProblemCount)
         );
     }
 
-    private FolderStats calculateFolderStats(Folder folder) {
-        int total = problemRepository.countByFolder(folder);
-        int solved = problemRepository.countByFolderAndSolvedCountGreaterThan(folder, 0);
-
-        List<Folder> children = folderRepository.findAllByParentFolder_FolderIdOrderByFolderIdAsc(folder.getFolderId());
-
-        for (Folder child : children) {
-            FolderStats childStats = calculateFolderStats(child);
-            total += childStats.total();
-            solved += childStats.solved();
-        }
-
-        return new FolderStats(total, solved);
+    private record FolderTreeBuildResult(
+            HomeResponse.RootFolderItem item,
+            FolderStats stats
+    ) {
     }
 
-    private record FolderStats(int total, int solved) {
+    private record FolderStats(
+            int total,
+            int solved
+    ) {
     }
 }
