@@ -58,3 +58,12 @@ export async function getFolderPractice(folderId) {
         ""
     );
 }
+
+export async function createFolder({ parentFolderId, name }) {
+    const response = await apiClient.post("/api/v1/folders", {
+        parentFolderId,
+        name,
+    });
+
+    return response.data.result;
+}

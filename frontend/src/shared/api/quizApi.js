@@ -1,5 +1,8 @@
 import { apiClient } from "./client.js";
-import { normalizePracticeResponse } from "./problemNormalizer.js";
+import {
+    normalizePracticeResponse,
+    normalizeProblem,
+} from "./problemNormalizer.js";
 
 export async function getBookmarkedPractice(problemCount = 10) {
     const response = await apiClient.post(
@@ -27,4 +30,32 @@ export async function submitProblemSubmission({
     });
 
     return response.data.result;
+}
+
+export async function importProblemsText({ folderId, rawText }) {
+    const response = await apiClient.post(
+        "/api/v1/problems/import/text",
+        rawText,
+        {
+            params: {
+                folderId,
+            },
+            headers: {
+                "Content-Type": "text/plain",
+            },
+        }
+    );
+
+    const result = response.data.result ?? {};
+
+    return {
+        ...result,
+        folderId: result.folderId ?? folderId,
+        savedCount: result.savedCount ?? 0,
+        problems: Array.isArray(result.problems)
+            ? result.problems.map((problem, index) =>
+                normalizeProblem(problem, index)
+            )
+            : [],
+    };
 }

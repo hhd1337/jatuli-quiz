@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getHomeData } from "../../shared/api/homeApi";
+import { createFolder } from "../../shared/api/folderApi";
+import { importProblemsText } from "../../shared/api/quizApi";
 
 const pageStyle = {
     maxWidth: 880,
@@ -41,6 +43,55 @@ const buttonBaseStyle = {
     borderRadius: 10,
     fontWeight: 700,
     fontSize: 15,
+};
+
+const folderActionButtonStyle = {
+    border: "1px solid var(--color-border)",
+    background: "var(--color-button-bg)",
+    color: "var(--color-button-text)",
+    borderRadius: 999,
+    padding: "5px 9px",
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+};
+
+const folderIconButtonStyle = {
+    border: "1px solid var(--color-border)",
+    background: "var(--color-button-bg)",
+    color: "var(--color-button-text)",
+    borderRadius: 999,
+    width: 28,
+    height: 28,
+    fontSize: 16,
+    fontWeight: 900,
+    cursor: "pointer",
+    lineHeight: 1,
+};
+
+const inputStyle = {
+    width: "100%",
+    border: "1px solid var(--color-border)",
+    background: "var(--color-bg)",
+    color: "var(--color-text)",
+    borderRadius: 10,
+    padding: "9px 10px",
+    fontSize: 14,
+    boxSizing: "border-box",
+};
+
+const textareaStyle = {
+    width: "100%",
+    border: "1px solid var(--color-border)",
+    background: "var(--color-bg)",
+    color: "var(--color-text)",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    lineHeight: 1.6,
+    resize: "vertical",
+    boxSizing: "border-box",
 };
 
 function getButtonStyle(disabled = false) {
@@ -305,12 +356,27 @@ function FolderTreeItem({
                             onToggleFolder,
                             pathNames = [],
                             parentFolderId = null,
+                            isManageMode,
+
+                            creatingParentFolder,
+                            newFolderName,
+                            setNewFolderName,
+                            onStartCreateFolder,
+                            onSubmitCreateFolder,
+                            onCancelCreateFolder,
+
+                            onStartImportProblems,
+
+                            openedMenuFolderId,
+                            onToggleFolderMenu,
+                            submitting = false,
                         }) {
     const children = folder.children ?? [];
     const hasChildren = children.length > 0;
     const isCollapsed = collapsedFolderIds.has(folder.folderId);
-    const isPlayableLeaf = folder.leaf && folder.totalCount > 0;
-    const isEmptyLeaf = folder.leaf && folder.totalCount <= 0;
+    const isLeaf = folder.leaf ?? folder.isLeaf ?? false;
+    const isPlayableLeaf = isLeaf && folder.totalCount > 0;
+    const isEmptyLeaf = isLeaf && folder.totalCount <= 0;
     const currentPathNames = [...pathNames, folder.name];
     const titlePath = currentPathNames.join("/");
 
@@ -332,27 +398,27 @@ function FolderTreeItem({
 
     return (
         <div>
-            <button
-                type="button"
-                onClick={handleClick}
+            <div
                 style={{
-                    width: "100%",
-                    border: "none",
-                    background: "transparent",
-                    color: "var(--color-text)",
-                    padding: "10px 0",
-                    cursor: hasChildren || isPlayableLeaf ? "pointer" : "default",
-                    textAlign: "left",
-                    opacity: isEmptyLeaf ? 0.55 : 1,
+                    display: "grid",
+                    gridTemplateColumns: "minmax(0, 1fr) auto",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "4px 0",
                 }}
             >
-                <div
+                <button
+                    type="button"
+                    onClick={handleClick}
                     style={{
-                        display: "grid",
-                        gridTemplateColumns: "minmax(0, 1fr) auto",
-                        alignItems: "center",
-                        gap: 12,
-                        paddingLeft: depth * 16,
+                        width: "100%",
+                        border: "none",
+                        background: "transparent",
+                        color: "var(--color-text)",
+                        padding: "10px 0",
+                        cursor: hasChildren || isPlayableLeaf ? "pointer" : "default",
+                        textAlign: "left",
+                        opacity: isEmptyLeaf ? 0.55 : 1,
                     }}
                 >
                     <div
@@ -361,22 +427,23 @@ function FolderTreeItem({
                             alignItems: "center",
                             gap: 8,
                             minWidth: 0,
+                            paddingLeft: depth * 16,
                         }}
                     >
-                        <span
-                            aria-hidden="true"
-                            style={{
-                                width: 22,
-                                flexShrink: 0,
-                                color: folder.leaf
-                                    ? "var(--color-text-muted)"
-                                    : "var(--color-primary)",
-                                fontWeight: 900,
-                                textAlign: "center",
-                            }}
-                        >
-                            {getFolderIcon(folder, isCollapsed)}
-                        </span>
+                    <span
+                        aria-hidden="true"
+                        style={{
+                            width: 22,
+                            flexShrink: 0,
+                            color: folder.leaf
+                                ? "var(--color-text-muted)"
+                                : "var(--color-primary)",
+                            fontWeight: 900,
+                            textAlign: "center",
+                        }}
+                    >
+                        {getFolderIcon(folder, isCollapsed)}
+                    </span>
 
                         <strong
                             style={{
@@ -399,12 +466,153 @@ function FolderTreeItem({
                                     fontWeight: 400,
                                 }}
                             >
-                                {folder.solvedCount}/{folder.totalCount}
-                            </span>
+                            {folder.solvedCount}/{folder.totalCount}
+                        </span>
                         )}
                     </div>
+                </button>
+
+                {isManageMode && (
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            flexShrink: 0,
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => onStartCreateFolder(folder, titlePath)}
+                            style={folderActionButtonStyle}
+                        >
+                            + 폴더
+                        </button>
+
+                        {isLeaf && (
+                            <button
+                                type="button"
+                                onClick={() => onStartImportProblems(folder, titlePath)}
+                                style={folderActionButtonStyle}
+                            >
+                                + 문제
+                            </button>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={() => onToggleFolderMenu(folder.folderId)}
+                            style={folderIconButtonStyle}
+                            aria-label={`${folder.name} 관리 메뉴`}
+                        >
+                            ⋯
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {creatingParentFolder?.folderId === folder.folderId && (
+                <div
+                    style={{
+                        marginLeft: depth * 16 + 34,
+                        marginTop: 4,
+                        marginBottom: 8,
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                    }}
+                >
+                    <input
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                onSubmitCreateFolder();
+                            }
+
+                            if (e.key === "Escape") {
+                                onCancelCreateFolder();
+                            }
+                        }}
+                        placeholder="새 폴더 이름"
+                        autoFocus
+                        style={inputStyle}
+                    />
+
+                    <button
+                        type="button"
+                        onClick={onSubmitCreateFolder}
+                        disabled={submitting}
+                        style={folderActionButtonStyle}
+                    >
+                        추가
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={onCancelCreateFolder}
+                        style={folderActionButtonStyle}
+                    >
+                        취소
+                    </button>
                 </div>
-            </button>
+            )}
+
+            {openedMenuFolderId === folder.folderId && (
+                <div
+                    style={{
+                        marginLeft: depth * 16 + 34,
+                        marginTop: 4,
+                        marginBottom: 8,
+                        border: "1px solid var(--color-border)",
+                        background: "var(--color-bg)",
+                        borderRadius: 12,
+                        padding: 8,
+                        display: "inline-flex",
+                        flexDirection: "column",
+                        gap: 4,
+                    }}
+                >
+                    {isLeaf && (
+                        <button
+                            type="button"
+                            onClick={() => onStartImportProblems(folder, titlePath)}
+                            style={{
+                                ...folderActionButtonStyle,
+                                borderRadius: 8,
+                            }}
+                        >
+                            문제 일괄등록
+                        </button>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={() => alert("폴더 이름 변경 API가 아직 없습니다.")}
+                        style={{
+                            ...folderActionButtonStyle,
+                            borderRadius: 8,
+                            opacity: 0.5,
+                            cursor: "not-allowed",
+                        }}
+                    >
+                        이름 변경 준비중
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => alert("폴더 삭제 API가 아직 없습니다.")}
+                        style={{
+                            ...folderActionButtonStyle,
+                            borderRadius: 8,
+                            opacity: 0.5,
+                            cursor: "not-allowed",
+                        }}
+                    >
+                        삭제 준비중
+                    </button>
+                </div>
+            )}
 
             {hasChildren && !isCollapsed && (
                 <div
@@ -424,6 +632,20 @@ function FolderTreeItem({
                             onToggleFolder={onToggleFolder}
                             pathNames={currentPathNames}
                             parentFolderId={folder.folderId}
+                            isManageMode={isManageMode}
+
+                            creatingParentFolder={creatingParentFolder}
+                            newFolderName={newFolderName}
+                            setNewFolderName={setNewFolderName}
+                            onStartCreateFolder={onStartCreateFolder}
+                            onSubmitCreateFolder={onSubmitCreateFolder}
+                            onCancelCreateFolder={onCancelCreateFolder}
+
+                            onStartImportProblems={onStartImportProblems}
+
+                            openedMenuFolderId={openedMenuFolderId}
+                            onToggleFolderMenu={onToggleFolderMenu}
+                            submitting={submitting}
                         />
                     ))}
                 </div>
@@ -439,6 +661,16 @@ export default function HomePage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [collapsedFolderIds, setCollapsedFolderIds] = useState(() => new Set());
+    const [isManageMode, setIsManageMode] = useState(false);
+
+    const [creatingParentFolder, setCreatingParentFolder] = useState(null);
+    const [newFolderName, setNewFolderName] = useState("");
+
+    const [problemImportTargetFolder, setProblemImportTargetFolder] = useState(null);
+    const [problemImportText, setProblemImportText] = useState("");
+
+    const [openedMenuFolderId, setOpenedMenuFolderId] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
 
     function toggleFolder(folderId) {
         setCollapsedFolderIds((prev) => {
@@ -454,22 +686,123 @@ export default function HomePage() {
         });
     }
 
-    useEffect(() => {
-        async function fetchHomeData() {
-            try {
-                setLoading(true);
-                setError("");
+    function handleStartCreateFolder(folder, titlePath) {
+        setCreatingParentFolder({
+            folderId: folder.folderId,
+            titlePath,
+        });
 
-                const data = await getHomeData();
-                setHomeData(data);
-            } catch (err) {
-                console.error("홈 화면 조회 실패:", err);
-                setError("홈 화면 정보를 불러오지 못했습니다.");
-            } finally {
-                setLoading(false);
-            }
+        setNewFolderName("");
+        setOpenedMenuFolderId(null);
+    }
+
+    function handleCancelCreateFolder() {
+        setCreatingParentFolder(null);
+        setNewFolderName("");
+    }
+
+    async function handleSubmitCreateFolder() {
+        const trimmedName = newFolderName.trim();
+
+        if (!trimmedName) {
+            alert("폴더 이름을 입력해주세요.");
+            return;
         }
 
+        if (!creatingParentFolder) return;
+
+        try {
+            setSubmitting(true);
+
+            await createFolder({
+                parentFolderId: creatingParentFolder.folderId,
+                name: trimmedName,
+            });
+
+            setCollapsedFolderIds((prev) => {
+                const next = new Set(prev);
+                next.delete(creatingParentFolder.folderId);
+                return next;
+            });
+
+            setCreatingParentFolder(null);
+            setNewFolderName("");
+
+            await fetchHomeData();
+        } catch (err) {
+            console.error("폴더 추가 실패:", err);
+            alert("폴더 추가에 실패했습니다.");
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    function handleStartImportProblems(folder, titlePath) {
+        setProblemImportTargetFolder({
+            folderId: folder.folderId,
+            titlePath,
+        });
+
+        setProblemImportText("");
+        setOpenedMenuFolderId(null);
+    }
+
+    function handleCancelImportProblems() {
+        setProblemImportTargetFolder(null);
+        setProblemImportText("");
+    }
+
+    async function handleSubmitImportProblems() {
+        const rawText = problemImportText.trim();
+
+        if (!rawText) {
+            alert("등록할 문제 문자열을 입력해주세요.");
+            return;
+        }
+
+        if (!problemImportTargetFolder) return;
+
+        try {
+            setSubmitting(true);
+
+            const result = await importProblemsText({
+                folderId: problemImportTargetFolder.folderId,
+                rawText,
+            });
+
+            setProblemImportText("");
+
+            await fetchHomeData();
+
+            alert(`${result.savedCount ?? 0}개의 문제가 등록되었습니다.`);
+        } catch (err) {
+            console.error("문제 일괄등록 실패:", err);
+            alert("문제 일괄등록에 실패했습니다.");
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    function handleToggleFolderMenu(folderId) {
+        setOpenedMenuFolderId((prev) => (prev === folderId ? null : folderId));
+    }
+
+    async function fetchHomeData() {
+        try {
+            setLoading(true);
+            setError("");
+
+            const data = await getHomeData();
+            setHomeData(data);
+        } catch (err) {
+            console.error("홈 화면 조회 실패:", err);
+            setError("홈 화면 정보를 불러오지 못했습니다.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    useEffect(() => {
         fetchHomeData();
     }, []);
 
@@ -887,6 +1220,24 @@ export default function HomePage() {
                             원하는 주제를 골라 바로 연습할 수 있어요.
                         </p>
                     </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setIsManageMode((prev) => !prev)}
+                        style={{
+                            ...getButtonStyle(false),
+                            padding: "8px 12px",
+                            fontSize: 13,
+                            background: isManageMode
+                                ? "var(--color-primary)"
+                                : "var(--color-button-bg)",
+                            color: isManageMode
+                                ? "var(--color-bg)"
+                                : "var(--color-button-text)",
+                        }}
+                    >
+                        {isManageMode ? "관리 모드 끄기" : "관리 모드"}
+                    </button>
                 </div>
 
                 {rootFolders.length === 0 ? (
@@ -922,12 +1273,154 @@ export default function HomePage() {
                                     onToggleFolder={toggleFolder}
                                     pathNames={[]}
                                     parentFolderId={null}
+                                    isManageMode={isManageMode}
+
+                                    creatingParentFolder={creatingParentFolder}
+                                    newFolderName={newFolderName}
+                                    setNewFolderName={setNewFolderName}
+                                    onStartCreateFolder={handleStartCreateFolder}
+                                    onSubmitCreateFolder={handleSubmitCreateFolder}
+                                    onCancelCreateFolder={handleCancelCreateFolder}
+
+                                    onStartImportProblems={handleStartImportProblems}
+
+                                    openedMenuFolderId={openedMenuFolderId}
+                                    onToggleFolderMenu={handleToggleFolderMenu}
+                                    submitting={submitting}
                                 />
                             </div>
                         ))}
                     </div>
                 )}
             </section>
+
+            {problemImportTargetFolder && (
+                <div
+                    style={{
+                        position: "fixed",
+                        right: 24,
+                        top: 24,
+                        bottom: 24,
+                        width: 460,
+                        maxWidth: "calc(100vw - 48px)",
+                        border: "1px solid var(--color-border)",
+                        background: "var(--color-surface)",
+                        color: "var(--color-text)",
+                        borderRadius: 18,
+                        padding: 20,
+                        boxShadow: "0 20px 60px rgba(0, 0, 0, 0.45)",
+                        zIndex: 100,
+                        overflowY: "auto",
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            gap: 12,
+                            marginBottom: 16,
+                        }}
+                    >
+                        <div>
+                            <h3
+                                style={{
+                                    margin: 0,
+                                    fontSize: 22,
+                                    letterSpacing: "-0.04em",
+                                }}
+                            >
+                                문제 일괄등록
+                            </h3>
+
+                            <p
+                                style={{
+                                    ...mutedTextStyle,
+                                    marginTop: 6,
+                                    marginBottom: 0,
+                                    fontSize: 13,
+                                    lineHeight: 1.5,
+                                }}
+                            >
+                                {problemImportTargetFolder.titlePath}
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={handleCancelImportProblems}
+                            style={folderIconButtonStyle}
+                        >
+                            ×
+                        </button>
+                    </div>
+
+                    <p
+                        style={{
+                            ...mutedTextStyle,
+                            marginTop: 0,
+                            marginBottom: 10,
+                            fontSize: 13,
+                            lineHeight: 1.6,
+                        }}
+                    >
+                        GPT로 만든 문제 문자열을 그대로 붙여넣으세요.
+                    </p>
+
+                    <textarea
+                        value={problemImportText}
+                        onChange={(e) => setProblemImportText(e.target.value)}
+                        placeholder={`문제1
+
+문제 본문
+
+해설 해설 본문
+
+정답 정답 본문
+
+---
+
+문제2
+
+문제 본문
+
+해설 해설 본문
+
+정답 정답 본문`}
+                        rows={18}
+                        style={textareaStyle}
+                    />
+
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: 8,
+                            marginTop: 14,
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={handleSubmitImportProblems}
+                            disabled={submitting}
+                            style={{
+                                ...getButtonStyle(submitting),
+                                flex: 1,
+                            }}
+                        >
+                            {submitting ? "등록 중..." : "문제 등록"}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={handleCancelImportProblems}
+                            style={getButtonStyle(false)}
+                        >
+                            닫기
+                        </button>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }
