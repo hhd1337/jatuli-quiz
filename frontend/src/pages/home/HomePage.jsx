@@ -499,14 +499,84 @@ function FolderTreeItem({
                             </button>
                         )}
 
-                        <button
-                            type="button"
-                            onClick={() => onToggleFolderMenu(folder.folderId)}
-                            style={folderIconButtonStyle}
-                            aria-label={`${folder.name} 관리 메뉴`}
+                        <div
+                            style={{
+                                position: "relative",
+                                display: "inline-flex",
+                            }}
                         >
-                            ⋯
-                        </button>
+                            <button
+                                type="button"
+                                onClick={() => onToggleFolderMenu(folder.folderId)}
+                                style={folderIconButtonStyle}
+                                aria-label={`${folder.name} 관리 메뉴`}
+                            >
+                                ⋯
+                            </button>
+
+                            {openedMenuFolderId === folder.folderId && (
+                                <div
+                                    style={{
+                                        position: "absolute",
+                                        right: 0,
+                                        top: "calc(100% + 8px)",
+                                        zIndex: 50,
+                                        minWidth: 132,
+                                        border: "1px solid var(--color-border)",
+                                        background: "var(--color-bg)",
+                                        borderRadius: 12,
+                                        padding: 8,
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: 4,
+                                        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.35)",
+                                    }}
+                                >
+                                    {isLeaf && (
+                                        <button
+                                            type="button"
+                                            onClick={() => onStartImportProblems(folder, titlePath)}
+                                            style={{
+                                                ...folderActionButtonStyle,
+                                                width: "100%",
+                                                borderRadius: 8,
+                                                justifyContent: "center",
+                                            }}
+                                        >
+                                            문제 일괄등록
+                                        </button>
+                                    )}
+
+                                    <button
+                                        type="button"
+                                        onClick={() => alert("폴더 이름 변경 API가 아직 없습니다.")}
+                                        style={{
+                                            ...folderActionButtonStyle,
+                                            width: "100%",
+                                            borderRadius: 8,
+                                            opacity: 0.5,
+                                            cursor: "not-allowed",
+                                        }}
+                                    >
+                                        이름 변경 준비중
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => alert("폴더 삭제 API가 아직 없습니다.")}
+                                        style={{
+                                            ...folderActionButtonStyle,
+                                            width: "100%",
+                                            borderRadius: 8,
+                                            opacity: 0.5,
+                                            cursor: "not-allowed",
+                                        }}
+                                    >
+                                        삭제 준비중
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
@@ -554,62 +624,6 @@ function FolderTreeItem({
                         style={folderActionButtonStyle}
                     >
                         취소
-                    </button>
-                </div>
-            )}
-
-            {openedMenuFolderId === folder.folderId && (
-                <div
-                    style={{
-                        marginLeft: depth * 16 + 34,
-                        marginTop: 4,
-                        marginBottom: 8,
-                        border: "1px solid var(--color-border)",
-                        background: "var(--color-bg)",
-                        borderRadius: 12,
-                        padding: 8,
-                        display: "inline-flex",
-                        flexDirection: "column",
-                        gap: 4,
-                    }}
-                >
-                    {isLeaf && (
-                        <button
-                            type="button"
-                            onClick={() => onStartImportProblems(folder, titlePath)}
-                            style={{
-                                ...folderActionButtonStyle,
-                                borderRadius: 8,
-                            }}
-                        >
-                            문제 일괄등록
-                        </button>
-                    )}
-
-                    <button
-                        type="button"
-                        onClick={() => alert("폴더 이름 변경 API가 아직 없습니다.")}
-                        style={{
-                            ...folderActionButtonStyle,
-                            borderRadius: 8,
-                            opacity: 0.5,
-                            cursor: "not-allowed",
-                        }}
-                    >
-                        이름 변경 준비중
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => alert("폴더 삭제 API가 아직 없습니다.")}
-                        style={{
-                            ...folderActionButtonStyle,
-                            borderRadius: 8,
-                            opacity: 0.5,
-                            cursor: "not-allowed",
-                        }}
-                    >
-                        삭제 준비중
                     </button>
                 </div>
             )}
