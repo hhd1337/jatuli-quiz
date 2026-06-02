@@ -25,7 +25,7 @@ const mutedTextStyle = {
 };
 
 const hrStyle = {
-    margin: "1px 0 15px",
+    margin: "3px 0 15px",
     border: "none",
     borderTop: "1px solid var(--color-border, #374151)",
 };
@@ -52,7 +52,7 @@ const titleParentPathStyle = {
 
 const titleMainStyle = {
     margin: 0,
-    color: "var(--color-text, #f9fafb)",
+    color: "var(--color-text-muted, #9ca3af)",
     fontSize: "clamp(18px, 5vw, 22px)",
     lineHeight: 1.35,
     fontWeight: 700,
@@ -113,6 +113,29 @@ const inputStyle = {
     borderRadius: 6,
 };
 
+const bottomActionBottom = "calc(20px + env(safe-area-inset-bottom))";
+
+const bottomLeftControlsStyle = {
+    position: "fixed",
+    left: "max(16px, calc((100vw - 800px) / 2 + 16px))",
+    bottom: bottomActionBottom,
+    display: "flex",
+    gap: 8,
+    zIndex: 900,
+};
+
+const bottomBookmarkStyle = {
+    position: "fixed",
+    right: "max(88px, calc((100vw - 800px) / 2 + 88px))",
+    bottom: bottomActionBottom,
+    width: 44,
+    height: 44,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 901,
+};
+
 function getButtonStyle(disabled = false) {
     return {
         border: "1px solid var(--color-border, #374151)",
@@ -126,6 +149,8 @@ function getButtonStyle(disabled = false) {
         borderRadius: 6,
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.65 : 1,
+        width: 80,
+        height: 35,
     };
 }
 
@@ -826,11 +851,6 @@ export default function QuizPlayPage() {
                         <h1 style={titleMainStyle}>
                             {currentTitle} [{problem.questionNo}번]
                         </h1>
-
-                        <BookmarkToggleButton
-                            isBookmarked={!!problem?.meta?.isBookmarked}
-                            onClick={toggleBookmark}
-                        />
                     </div>
                 </div>
 
@@ -898,14 +918,19 @@ export default function QuizPlayPage() {
                 </div>
             )}
 
+            {submissionError && (
+                <p
+                    style={{
+                        color: "var(--color-danger, #fca5a5)",
+                        marginTop: 0,
+                    }}
+                >
+                    {submissionError}
+                </p>
+            )}
             <div
                 onClick={(e) => e.stopPropagation()}
-                style={{
-                    display: "flex",
-                    gap: 8,
-                    marginBottom: 16,
-                    flexWrap: "wrap",
-                }}
+                style={bottomLeftControlsStyle}
             >
                 <button
                     style={getButtonStyle(isPrevDisabled)}
@@ -924,16 +949,15 @@ export default function QuizPlayPage() {
                 </button>
             </div>
 
-            {submissionError && (
-                <p
-                    style={{
-                        color: "var(--color-danger, #fca5a5)",
-                        marginTop: 0,
-                    }}
-                >
-                    {submissionError}
-                </p>
-            )}
+            <div
+                onClick={(e) => e.stopPropagation()}
+                style={bottomBookmarkStyle}
+            >
+                <BookmarkToggleButton
+                    isBookmarked={!!problem?.meta?.isBookmarked}
+                    onClick={toggleBookmark}
+                />
+            </div>
 
             {timeAdjustModal.open && (
                 <div
@@ -1054,8 +1078,8 @@ function BookmarkToggleButton({ isBookmarked, onClick }) {
             aria-label={isBookmarked ? "북마크 해제" : "북마크 추가"}
             title={isBookmarked ? "북마크 해제" : "북마크 추가"}
             style={{
-                width: 32,
-                height: 32,
+                width: 48,
+                height: 48,
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1070,8 +1094,8 @@ function BookmarkToggleButton({ isBookmarked, onClick }) {
             }}
         >
             <svg
-                width="24"
-                height="24"
+                width="36"
+                height="36"
                 viewBox="0 0 24 24"
                 aria-hidden="true"
             >
