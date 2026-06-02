@@ -1001,9 +1001,6 @@ export default function HomePage() {
     const exceededGoalCount = Math.max(0, todayGoalSolvedCount - todayGoalCount);
     const isGoalCompleted = todayGoalCount > 0 && todayGoalSolvedCount >= todayGoalCount;
 
-    const bookmarkButtonLabel =
-        bookmarkSolvedCount > 0 ? "이어서 풀기" : "시작하기";
-
     return (
         <div style={pageStyle}>
             {/* ================== 헤더 ================== */}
@@ -1247,28 +1244,6 @@ export default function HomePage() {
                         ariaLabel="북마크 문제 전체 순회 진행률"
                     />
 
-                    {/*<div*/}
-                    {/*    style={{*/}
-                    {/*        display: "flex",*/}
-                    {/*        justifyContent: "center",*/}
-                    {/*        alignItems: "center",*/}
-                    {/*        gap: 12,*/}
-                    {/*        marginTop: 17,*/}
-                    {/*    }}*/}
-                    {/*>*/}
-                    {/*    <button*/}
-                    {/*        type="button"*/}
-                    {/*        onClick={() => navigate("/quiz/play?mode=bookmark")}*/}
-                    {/*        disabled={!hasBookmarkProblems}*/}
-                    {/*        style={{*/}
-                    {/*            ...getButtonStyle(!hasBookmarkProblems),*/}
-                    {/*            minWidth: 300,*/}
-                    {/*        }}*/}
-                    {/*    >*/}
-                    {/*        {bookmarkButtonLabel}*/}
-                    {/*    </button>*/}
-                    {/*</div>*/}
-
                     {bookmarkAction?.description && (
                         <p
                             style={{
@@ -1484,21 +1459,21 @@ export default function HomePage() {
                         onChange={(e) => setProblemImportText(e.target.value)}
                         placeholder={`문제1
 
-문제 본문
-
-해설 해설 본문
-
-정답 정답 본문
-
----
-
-문제2
-
-문제 본문
-
-해설 해설 본문
-
-정답 정답 본문`}
+                        문제 본문
+                        
+                        해설 해설 본문
+                        
+                        정답 정답 본문
+                        
+                        ---
+                        
+                        문제2
+                        
+                        문제 본문
+                        
+                        해설 해설 본문
+                        
+                        정답 정답 본문`}
                         rows={18}
                         style={textareaStyle}
                     />
