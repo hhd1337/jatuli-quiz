@@ -36,18 +36,40 @@
     --color-button-disabled-text: #6b7280;
 }
 
-* {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
 }
 
-html,
-body,
-#root {
+html {
+    width: 100%;
     min-height: 100%;
     margin: 0;
+    background: var(--color-bg);
+
+    /* iPhone Safari에서 임의 글자 확대 방지 */
+    -webkit-text-size-adjust: 100%;
 }
 
 body {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
     background: var(--color-bg);
     color: var(--color-text);
+    overflow-x: hidden;
+
+    /* Vite 기본 CSS나 브라우저 기본 레이아웃 영향 방지 */
+    display: block;
+    place-items: initial;
+}
+
+#root {
+    width: 100%;
+    max-width: none;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    text-align: initial;
 }

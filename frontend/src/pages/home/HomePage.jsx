@@ -5,10 +5,12 @@ import { createFolder } from "../../shared/api/folderApi";
 import { importProblemsText } from "../../shared/api/quizApi";
 
 const pageStyle = {
+    width: "100%",
     maxWidth: 880,
     margin: "0 auto",
-    padding: "32px 20px 56px",
+    padding: "32px clamp(8px, 3vw, 20px) 56px",
     color: "var(--color-text)",
+    boxSizing: "border-box",
 };
 
 const sectionStyle = {
@@ -16,19 +18,23 @@ const sectionStyle = {
 };
 
 const cardStyle = {
+    width: "100%",
+    boxSizing: "border-box",
     border: "1px solid var(--color-border)",
     background: "var(--color-surface)",
     color: "var(--color-text)",
     borderRadius: 18,
-    padding: 20,
+    padding: "clamp(16px, 4vw, 20px)",
 };
 
 const softCardStyle = {
+    width: "100%",
+    boxSizing: "border-box",
     border: "1px solid var(--color-border)",
     background: "var(--color-surface)",
     color: "var(--color-text)",
     borderRadius: 16,
-    padding: 18,
+    padding: "clamp(14px, 3.5vw, 18px)",
 };
 
 const mutedTextStyle = {
@@ -431,7 +437,7 @@ function FolderTreeItem({
                             alignItems: "center",
                             gap: 8,
                             minWidth: 0,
-                            paddingLeft: depth * 16,
+                            paddingLeft: depth * 3,
                         }}
                     >
                     <span
@@ -590,7 +596,7 @@ function FolderTreeItem({
             {creatingParentFolder?.folderId === folder.folderId && (
                 <div
                     style={{
-                        marginLeft: depth * 16 + 34,
+                        marginLeft: depth * 12 + 30,
                         marginTop: 4,
                         marginBottom: 8,
                         display: "flex",
@@ -637,8 +643,8 @@ function FolderTreeItem({
             {hasChildren && !isCollapsed && (
                 <div
                     style={{
-                        marginLeft: depth * 16 + 11,
-                        paddingLeft: 12,
+                        marginLeft: depth * 12 + 8,
+                        paddingLeft: 10,
                         borderLeft: "1px solid var(--color-border)",
                     }}
                 >
@@ -1278,7 +1284,7 @@ export default function HomePage() {
                     <div
                         style={{
                             ...cardStyle,
-                            padding: "10px 16px",
+                            padding: "10px clamp(8px, 3vw, 16px)",
                         }}
                     >
                         {rootFolders.map((folder, index) => (
