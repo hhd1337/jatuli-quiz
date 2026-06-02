@@ -13,6 +13,7 @@ const TEN_MINUTES_IN_SECONDS = 10 * 60;
 const pageStyle = {
     width: "100%",
     maxWidth: 800,
+    minHeight: "100dvh",
     margin: "0 auto",
     padding: "24px clamp(8px, 3vw, 20px) 72px",
     color: "var(--color-text, #f9fafb)",
@@ -661,6 +662,13 @@ export default function QuizPlayPage() {
         setTimeAdjustError("");
     };
 
+    const toggleAnswerByPageClick = () => {
+        if (submitting) return;
+        if (timeAdjustModal.open) return;
+
+        setShowAnswer((prev) => !prev);
+    };
+
     const handleNextClick = async () => {
         if (submitting) return;
 
@@ -732,10 +740,6 @@ export default function QuizPlayPage() {
                         예: <code>/quiz/play?mode=folder&amp;folderId=9</code>
                     </p>
                 )}
-
-                <button style={getButtonStyle(false)} onClick={handleExit}>
-                    {getExitButtonText()}
-                </button>
             </div>
         );
     }
@@ -745,9 +749,6 @@ export default function QuizPlayPage() {
             <div style={pageStyle}>
                 <h1 style={{ margin: 0 }}>{titlePath || "문제 풀이"}</h1>
                 <p style={mutedTextStyle}>{getEmptyMessage()}</p>
-                <button style={getButtonStyle(false)} onClick={handleExit}>
-                    {getExitButtonText()}
-                </button>
             </div>
         );
     }
@@ -788,7 +789,10 @@ export default function QuizPlayPage() {
     const isExitDisabled = submitting;
 
     return (
-        <div style={pageStyle}>
+        <div
+            style={pageStyle}
+            onClick={toggleAnswerByPageClick}
+        >
             <div
                 style={{
                     display: "flex",
@@ -895,6 +899,7 @@ export default function QuizPlayPage() {
             )}
 
             <div
+                onClick={(e) => e.stopPropagation()}
                 style={{
                     display: "flex",
                     gap: 8,
@@ -902,13 +907,6 @@ export default function QuizPlayPage() {
                     flexWrap: "wrap",
                 }}
             >
-                <button
-                    style={getButtonStyle(false)}
-                    onClick={() => setShowAnswer((v) => !v)}
-                >
-                    {showAnswer ? "정답/해설 숨기기" : "정답/해설 보기"}
-                </button>
-
                 <button
                     style={getButtonStyle(isPrevDisabled)}
                     onClick={goPrev}
@@ -923,14 +921,6 @@ export default function QuizPlayPage() {
                     disabled={isNextDisabled}
                 >
                     {submitting ? "제출 중..." : "다음 문제"}
-                </button>
-
-                <button
-                    style={getButtonStyle(isExitDisabled)}
-                    onClick={handleExit}
-                    disabled={isExitDisabled}
-                >
-                    {getExitButtonText()}
                 </button>
             </div>
 
@@ -947,6 +937,7 @@ export default function QuizPlayPage() {
 
             {timeAdjustModal.open && (
                 <div
+                    onClick={(e) => e.stopPropagation()}
                     style={{
                         position: "fixed",
                         inset: 0,
@@ -1040,12 +1031,14 @@ export default function QuizPlayPage() {
                 </div>
             )}
 
-            <FabGroup
-                onEdit={goEdit}
-                onHome={() => navigate("/")}
-                onToggleMusic={() => setIsMusicOn((v) => !v)}
-                isMusicOn={isMusicOn}
-            />
+            <div onClick={(e) => e.stopPropagation()}>
+                <FabGroup
+                    onEdit={goEdit}
+                    onHome={() => navigate("/")}
+                    onToggleMusic={() => setIsMusicOn((v) => !v)}
+                    isMusicOn={isMusicOn}
+                />
+            </div>
         </div>
     );
 }
@@ -1054,7 +1047,10 @@ function BookmarkToggleButton({ isBookmarked, onClick }) {
     return (
         <button
             type="button"
-            onClick={onClick}
+            onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+            }}
             aria-label={isBookmarked ? "북마크 해제" : "북마크 추가"}
             title={isBookmarked ? "북마크 해제" : "북마크 추가"}
             style={{
