@@ -14,7 +14,7 @@ const pageStyle = {
 };
 
 const sectionStyle = {
-    marginTop: 32,
+    marginTop: 8,
 };
 
 const cardStyle = {
@@ -140,22 +140,22 @@ function formatRoundedMinutes(timeText) {
 
     const totalMinutes = Math.round(hours * 60 + minutes + seconds / 60);
 
-    if (totalMinutes <= 0) return "0분";
+    if (totalMinutes <= 0) return "0m";
 
     if (totalMinutes >= 60) {
         const roundedHours = Math.floor(totalMinutes / 60);
         const remainMinutes = totalMinutes % 60;
 
-        if (remainMinutes === 0) return `${roundedHours}시간`;
-        return `${roundedHours}시간 ${remainMinutes}분`;
+        if (remainMinutes === 0) return `${roundedHours}h`;
+        return `${roundedHours}h ${remainMinutes}m`;
     }
 
-    return `${totalMinutes}분`;
+    return `${totalMinutes}m`;
 }
 
 function getStreakMarks(streakDays) {
     if (!streakDays || streakDays <= 0) return "-";
-    return "🧱".repeat(streakDays);
+    return "🍀".repeat(streakDays);
 }
 
 function parseKoreanTimeToSeconds(timeText) {
@@ -181,18 +181,18 @@ function formatAverageTimePerProblem(timeText, solvedCount) {
     const averageSeconds = Math.round(totalSeconds / solvedCount);
 
     if (averageSeconds <= 0) {
-        return "문제당 평균 1초 미만 걸렸어요";
+        return "문제당 평균 1초";
     }
 
     if (averageSeconds < 60) {
-        return `문제당 평균 ${averageSeconds}초 정도 걸렸어요`;
+        return `문제당 평균 ${averageSeconds}초`;
     }
 
     const minutes = Math.floor(averageSeconds / 60);
     const seconds = averageSeconds % 60;
 
     if (seconds === 0) {
-        return `문제당 평균 ${minutes}분 정도 걸렸어요`;
+        return `문제당 평균 ${minutes}분`;
     }
 
     return `문제당 평균 ${minutes}분 ${seconds}초 정도 걸렸어요`;
@@ -351,7 +351,7 @@ function getFolderIcon(folder, isCollapsed) {
         return folder.totalCount > 0 ? "🔘" : "◌";
     }
 
-    return isCollapsed ? "📁" : "📂";
+    return isCollapsed ? "🗂️" : "🗂️";
 }
 
 function FolderTreeItem({
@@ -425,7 +425,7 @@ function FolderTreeItem({
                         border: "none",
                         background: "transparent",
                         color: "var(--color-text)",
-                        padding: "10px 0",
+                        padding: isLeaf ? "2px 0" : "8px 0",
                         cursor: hasChildren || isPlayableLeaf ? "pointer" : "default",
                         textAlign: "left",
                         opacity: isEmptyLeaf ? 0.55 : 1,
@@ -443,7 +443,7 @@ function FolderTreeItem({
                     <span
                         aria-hidden="true"
                         style={{
-                            width: 22,
+                            width: 18,
                             flexShrink: 0,
                             color: folder.leaf
                                 ? "var(--color-text-muted)"
@@ -472,11 +472,11 @@ function FolderTreeItem({
                                 style={{
                                     flexShrink: 0,
                                     color: "var(--color-primary)",
-                                    fontSize: 15,
+                                    fontSize: 11,
                                     fontWeight: 400,
                                 }}
                             >
-                            {folder.solvedCount}/{folder.totalCount}
+                            {folder.totalCount}문제
                         </span>
                         )}
                     </div>
@@ -680,13 +680,76 @@ function FolderTreeItem({
     );
 }
 
+function collectFolderIdsWithChildren(folders = []) {
+    const ids = [];
+
+    folders.forEach((folder) => {
+        const children = folder.children ?? [];
+
+        if (children.length > 0) {
+            ids.push(folder.folderId);
+            ids.push(...collectFolderIdsWithChildren(children));
+        }
+    });
+
+    return ids;
+}
+
+const COLLAPSED_FOLDER_IDS_STORAGE_KEY = "jatuli.home.collapsedFolderIds";
+
+function readCollapsedFolderIdsFromStorage() {
+    try {
+        const rawValue = window.localStorage.getItem(
+            COLLAPSED_FOLDER_IDS_STORAGE_KEY
+        );
+
+        if (!rawValue) {
+            return null;
+        }
+
+        const parsedValue = JSON.parse(rawValue);
+
+        if (!Array.isArray(parsedValue)) {
+            return null;
+        }
+
+        return new Set(parsedValue);
+    } catch (error) {
+        console.error("폴더 접힘 상태 복원 실패:", error);
+        return null;
+    }
+}
+
+function saveCollapsedFolderIdsToStorage(collapsedFolderIds) {
+    try {
+        window.localStorage.setItem(
+            COLLAPSED_FOLDER_IDS_STORAGE_KEY,
+            JSON.stringify([...collapsedFolderIds])
+        );
+    } catch (error) {
+        console.error("폴더 접힘 상태 저장 실패:", error);
+    }
+}
+
 export default function HomePage() {
     const navigate = useNavigate();
 
     const [homeData, setHomeData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [collapsedFolderIds, setCollapsedFolderIds] = useState(() => new Set());
+
+    const [initialCollapsedFolderIds] = useState(() =>
+        readCollapsedFolderIdsFromStorage()
+    );
+
+    const [collapsedFolderIds, setCollapsedFolderIds] = useState(
+        () => initialCollapsedFolderIds ?? new Set()
+    );
+
+    const hasInitializedCollapsedFoldersRef = useRef(
+        initialCollapsedFolderIds !== null
+    );
+
     const [isManageMode, setIsManageMode] = useState(false);
 
     const [creatingParentFolder, setCreatingParentFolder] = useState(null);
@@ -707,6 +770,8 @@ export default function HomePage() {
             } else {
                 next.add(folderId);
             }
+
+            saveCollapsedFolderIdsToStorage(next);
 
             return next;
         });
@@ -756,6 +821,9 @@ export default function HomePage() {
             setCollapsedFolderIds((prev) => {
                 const next = new Set(prev);
                 next.delete(creatingParentFolder.folderId);
+
+                saveCollapsedFolderIdsToStorage(next);
+
                 return next;
             });
 
@@ -828,6 +896,17 @@ export default function HomePage() {
 
             const data = await getHomeData();
             setHomeData(data);
+
+            if (!hasInitializedCollapsedFoldersRef.current) {
+                const defaultCollapsedFolderIds = new Set(
+                    collectFolderIdsWithChildren(data.rootFolders ?? [])
+                );
+
+                setCollapsedFolderIds(defaultCollapsedFolderIds);
+                saveCollapsedFolderIdsToStorage(defaultCollapsedFolderIds);
+
+                hasInitializedCollapsedFoldersRef.current = true;
+            }
         } catch (err) {
             console.error("홈 화면 조회 실패:", err);
             setError("홈 화면 정보를 불러오지 못했습니다.");
@@ -843,7 +922,7 @@ export default function HomePage() {
     if (loading) {
         return (
             <div style={pageStyle}>
-                <h1 style={{ margin: 0 }}>정진하자</h1>
+                <h1 style={{ margin: 0 }}>정진</h1>
                 <p style={mutedTextStyle}>홈 화면을 불러오는 중입니다...</p>
             </div>
         );
@@ -852,7 +931,7 @@ export default function HomePage() {
     if (error) {
         return (
             <div style={pageStyle}>
-                <h1 style={{ margin: 0 }}>정진하자</h1>
+                <h1 style={{ margin: 0 }}>정진</h1>
                 <p style={{ color: "var(--color-primary)" }}>{error}</p>
             </div>
         );
@@ -861,7 +940,7 @@ export default function HomePage() {
     if (!homeData) {
         return (
             <div style={pageStyle}>
-                <h1 style={{ margin: 0 }}>정진하자</h1>
+                <h1 style={{ margin: 0 }}>정진</h1>
                 <p style={mutedTextStyle}>홈 데이터가 없습니다.</p>
             </div>
         );
@@ -896,7 +975,7 @@ export default function HomePage() {
             {/* ================== 헤더 ================== */}
             <header
                 style={{
-                    marginBottom: 24,
+                    marginBottom: 0,
                 }}
             >
                 <div
@@ -905,36 +984,37 @@ export default function HomePage() {
                         justifyContent: "space-between",
                         alignItems: "flex-end",
                         gap: 16,
-                        marginBottom: 10,
+                        marginBottom: 7,
                     }}
                 >
                     <div>
                         <h1
                             style={{
                                 margin: 0,
-                                fontSize: 38,
+                                fontSize: 30,
                                 lineHeight: 1.15,
                                 letterSpacing: "-0.05em",
                             }}
                         >
-                            정진하자
+                            정진
                         </h1>
                         <ol
                             style={{
                                 ...mutedTextStyle,
-                                marginTop: 20,
+                                marginTop: 5,
                                 marginBottom: 0,
                                 paddingLeft: 15,
-                                fontSize: 15,
+                                fontSize: 10,
                                 lineHeight: 1.7,
                             }}
                         >
-                            <li>뜨거운 열정보다 중요한 것은 지속적인 열정이다.</li>
+                            <li>뜨거운 열정도 중요하지만, 지속적인 열정이 더 중요하다.</li>
                             <li>나의 목표는 백엔드 개발자로서의 압도적인 기본기와 문제해결 경험이다.</li>
                             <li>
                                 나는 조급함으로 축적 루틴을 망치지 않고, 거북이 마음으로 쌓아
                                 백엔드 괴물이 된다.
                             </li>
+                            <li>자신을 믿지 못하는 녀석은 노력할 가치도 없다. 나는 나를 믿는다.</li>
                         </ol>
                     </div>
                 </div>
@@ -945,7 +1025,7 @@ export default function HomePage() {
                 <div
                     style={{
                         ...cardStyle,
-                        padding: 22,
+                        padding: "15px 15px 8px",
                     }}
                 >
                     <div
@@ -954,30 +1034,19 @@ export default function HomePage() {
                             justifyContent: "space-between",
                             alignItems: "center",
                             gap: 16,
-                            marginBottom: 18,
+                            marginBottom: 10,
                         }}
                     >
                         <div>
                             <h2
                                 style={{
                                     margin: 0,
-                                    fontSize: 22,
+                                    fontSize: 18,
                                     letterSpacing: "-0.04em",
                                 }}
                             >
-                                🙆 오늘의 성취
+                                오늘의 성취
                             </h2>
-
-                            {/*<p*/}
-                            {/*    style={{*/}
-                            {/*        ...mutedTextStyle,*/}
-                            {/*        marginTop: 6,*/}
-                            {/*        marginBottom: 0,*/}
-                            {/*        fontSize: 14,*/}
-                            {/*    }}*/}
-                            {/*>*/}
-                            {/*    오늘 만든 작은 승리를 한눈에 확인하세요.*/}
-                            {/*</p>*/}
                         </div>
 
                         <div
@@ -997,20 +1066,20 @@ export default function HomePage() {
                             display: "grid",
                             gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
                             gap: "clamp(8px, 2vw, 12px)",
-                            marginBottom: 18,
+                            marginBottom: 7,
                         }}
                     >
                         <MetricCard
                             label="오늘 푼 문제"
-                            value={`${todaySolvedCount}제`}
+                            value={`${todaySolvedCount}`}
                             valueColor="var(--color-accent-strong)"
                             description={
                                 isGoalCompleted
-                                    ? `목표보다 ${exceededGoalCount}문제 더 풀었어요`
-                                    : `목표 ${todayGoalCount}문제까지 ${Math.max(
+                                    ? `목표 ${exceededGoalCount}문제 초과`
+                                    : `목표까지 ${Math.max(
                                         0,
                                         todayGoalCount - todayGoalSolvedCount
-                                    )}문제 남았어요`
+                                    )}문제`
                             }
                         />
 
@@ -1026,7 +1095,7 @@ export default function HomePage() {
 
                         <MetricCard
                             label="연속 도전"
-                            value={`${summary.streakDays}일째`}
+                            value={`${summary.streakDays}일`}
                             valueColor="var(--color-accent-strong)"
                             description={getStreakMarks(summary.streakDays)}
                         />
@@ -1035,37 +1104,17 @@ export default function HomePage() {
                     <div
                         style={{
                             borderTop: "1px solid var(--color-border)",
-                            paddingTop: 16,
+                            paddingTop: 4,
+                            marginLeft: 4
                         }}
                     >
-                        {/*<div*/}
-                        {/*    style={{*/}
-                        {/*        display: "flex",*/}
-                        {/*        justifyContent: "space-between",*/}
-                        {/*        alignItems: "center",*/}
-                        {/*        gap: 12,*/}
-                        {/*        marginBottom: 8,*/}
-                        {/*        fontSize: 14,*/}
-                        {/*    }}*/}
-                        {/*>*/}
-                        {/*    <span style={mutedTextStyle}>오늘 목표</span>*/}
-                        {/*    <strong>*/}
-                        {/*        {todayGoalSolvedCount} / {todayGoalCount}문제*/}
-                        {/*    </strong>*/}
-                        {/*</div>*/}
-
-                        {/*<ProgressBar*/}
-                        {/*    value={todayGoalProgressPercent}*/}
-                        {/*    height={10}*/}
-                        {/*    ariaLabel="오늘 목표 달성률"*/}
-                        {/*/>*/}
-
                         <p
                             style={{
                                 ...mutedTextStyle,
-                                marginTop: 12,
+                                marginTop: 0,
                                 marginBottom: 0,
                                 fontSize: 14,
+                                color: "var(--color-primary)",
                             }}
                         >
                             누적 {summary.solvedCountTotal}문제 ·{" "}
@@ -1077,49 +1126,48 @@ export default function HomePage() {
 
             {/* ================== 북마크 순회 ================== */}
             <section style={sectionStyle}>
-                {/*<h2*/}
-                {/*    style={{*/}
-                {/*        marginTop: 0,*/}
-                {/*        marginBottom: 12,*/}
-                {/*        fontSize: 26,*/}
-                {/*        letterSpacing: "-0.04em",*/}
-                {/*    }}*/}
-                {/*>*/}
-                {/*    북마크 문제 이어 풀기*/}
-                {/*</h2>*/}
+                <div
+                    role="button"
+                    tabIndex={hasBookmarkProblems ? 0 : -1}
+                    aria-disabled={!hasBookmarkProblems}
+                    onClick={() => {
+                        if (!hasBookmarkProblems) return;
+                        navigate("/quiz/play?mode=bookmark");
+                    }}
+                    onKeyDown={(e) => {
+                        if (!hasBookmarkProblems) return;
 
-                <div style={cardStyle}>
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            navigate("/quiz/play?mode=bookmark");
+                        }
+                    }}
+                    style={{
+                        ...cardStyle,
+                        cursor: hasBookmarkProblems ? "pointer" : "default",
+                        opacity: hasBookmarkProblems ? 1 : 0.65,
+                        transition: "transform 0.15s ease, border-color 0.15s ease",
+                    }}
+                >
                     <div
                         style={{
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "flex-start",
                             gap: 16,
-                            marginBottom: 14,
+                            marginBottom: 4,
                         }}
                     >
                         <div>
                             <h3
                                 style={{
                                     margin: 0,
-                                    fontSize: 22,
+                                    fontSize: 18,
                                     letterSpacing: "-0.04em",
                                 }}
                             >
-                                📦 북마크 문제 이어 풀기
+                                북마크 문제 순회
                             </h3>
-
-                            <p
-                                style={{
-                                    ...mutedTextStyle,
-                                    marginTop: 8,
-                                    marginBottom: 0,
-                                    lineHeight: 1.55,
-                                    fontSize: 15,
-                                }}
-                            >
-                                북마크한 문제를 한 바퀴 다 풀면 레벨업.
-                            </p>
                         </div>
 
                         <div
@@ -1127,13 +1175,14 @@ export default function HomePage() {
                                 flexShrink: 0,
                                 border: "1px solid var(--color-border)",
                                 borderRadius: 999,
-                                padding: "6px 10px",
-                                color: "var(--color-primary)",
-                                fontSize: 13,
+                                padding: "5px 9px",
+                                color: "var(--color-accent-strong)",
+                                fontSize: 14,
                                 fontWeight: 800,
+                                marginTop: -5,
                             }}
                         >
-                            {currentBookmarkedRoundNo}회차 : Level {summary.level}
+                            {currentBookmarkedRoundNo}회차 : Lv {summary.level}
                         </div>
 
                     </div>
@@ -1152,6 +1201,7 @@ export default function HomePage() {
                                 style={{
                                     fontSize: 28,
                                     letterSpacing: "-0.04em",
+                                    color: "var(--color-primary)",
                                 }}
                             >
                                 {bookmarkSolvedCount}
@@ -1171,40 +1221,31 @@ export default function HomePage() {
 
                     <ProgressBar
                         value={bookmarkProgressPercent}
-                        height={14}
+                        height={8}
                         ariaLabel="북마크 문제 전체 순회 진행률"
                     />
 
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: 12,
-                            marginTop: 18,
-                        }}
-                    >
-                        <p
-                            style={{
-                                ...mutedTextStyle,
-                                margin: 0,
-                                fontSize: 14,
-                            }}
-                        >
-                            {hasBookmarkProblems
-                                ? "남은 문제를 이어서 풀어보세요."
-                                : "아직 북마크된 문제가 없습니다."}
-                        </p>
-
-                        <button
-                            type="button"
-                            onClick={() => navigate("/quiz/play?mode=bookmark")}
-                            disabled={!hasBookmarkProblems}
-                            style={getButtonStyle(!hasBookmarkProblems)}
-                        >
-                            {bookmarkButtonLabel}
-                        </button>
-                    </div>
+                    {/*<div*/}
+                    {/*    style={{*/}
+                    {/*        display: "flex",*/}
+                    {/*        justifyContent: "center",*/}
+                    {/*        alignItems: "center",*/}
+                    {/*        gap: 12,*/}
+                    {/*        marginTop: 17,*/}
+                    {/*    }}*/}
+                    {/*>*/}
+                    {/*    <button*/}
+                    {/*        type="button"*/}
+                    {/*        onClick={() => navigate("/quiz/play?mode=bookmark")}*/}
+                    {/*        disabled={!hasBookmarkProblems}*/}
+                    {/*        style={{*/}
+                    {/*            ...getButtonStyle(!hasBookmarkProblems),*/}
+                    {/*            minWidth: 300,*/}
+                    {/*        }}*/}
+                    {/*    >*/}
+                    {/*        {bookmarkButtonLabel}*/}
+                    {/*    </button>*/}
+                    {/*</div>*/}
 
                     {bookmarkAction?.description && (
                         <p
@@ -1223,59 +1264,32 @@ export default function HomePage() {
 
             {/* ================== 전체 문제 ================== */}
             <section style={sectionStyle}>
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-end",
-                        gap: 12,
-                        marginBottom: 12,
-                    }}
-                >
-                    <div>
-                        <h2
-                            style={{
-                                margin: 0,
-                                fontSize: 26,
-                                letterSpacing: "-0.04em",
-                            }}
-                        >
-                            전체 문제
-                        </h2>
 
-                        <p
-                            style={{
-                                ...mutedTextStyle,
-                                marginTop: 6,
-                                marginBottom: 0,
-                                fontSize: 14,
-                            }}
-                        >
-                            원하는 주제를 골라 바로 연습할 수 있어요.
-                        </p>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={() => setIsManageMode((prev) => !prev)}
-                        style={{
-                            ...getButtonStyle(false),
-                            padding: "8px 12px",
-                            fontSize: 13,
-                            background: isManageMode
-                                ? "var(--color-primary)"
-                                : "var(--color-button-bg)",
-                            color: isManageMode
-                                ? "var(--color-bg)"
-                                : "var(--color-button-text)",
-                        }}
-                    >
-                        {isManageMode ? "관리 모드 끄기" : "관리 모드"}
-                    </button>
-                </div>
 
                 {rootFolders.length === 0 ? (
+
                     <div style={cardStyle}>
+                        <div
+                            style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "flex-end",
+                                gap: 12,
+                                marginBottom: 12,
+                            }}
+                        >
+                            <div>
+                                <h2
+                                    style={{
+                                        margin: 0,
+                                        fontSize: 20,
+                                        letterSpacing: "-0.04em",
+                                    }}
+                                >
+                                    🐿️ 전체 문제 🐿️
+                                </h2>
+                            </div>
+                        </div>
                         <p style={{ ...mutedTextStyle, margin: 0 }}>
                             표시할 문제가 없습니다.
                         </p>
@@ -1287,6 +1301,48 @@ export default function HomePage() {
                             padding: "10px clamp(8px, 3vw, 16px)",
                         }}
                     >
+                        <div
+                            style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "flex-end",
+                                gap: 12,
+                                marginBottom: 1,
+                            }}
+                        >
+                            <div>
+                                <h2
+                                    style={{
+                                        margin: 8,
+                                        marginBottom: 10,
+                                        fontSize: 20,
+                                        letterSpacing: "-0.04em",
+                                    }}
+                                >
+                                    문제집
+                                </h2>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setIsManageMode((prev) => !prev)}
+                                style={{
+                                    ...getButtonStyle(false),
+                                    padding: "7px 12px",
+                                    marginBottom: 10,
+                                    fontSize: 13,
+                                    background: isManageMode
+                                        ? "var(--color-primary)"
+                                        : "var(--color-button-bg)",
+                                    color: isManageMode
+                                        ? "var(--color-bg)"
+                                        : "var(--color-button-text)",
+                                }}
+                            >
+                                {isManageMode ? "관리 모드 끄기" : "관리 모드"}
+                            </button>
+                        </div>
+
                         {rootFolders.map((folder, index) => (
                             <div
                                 key={folder.folderId}
