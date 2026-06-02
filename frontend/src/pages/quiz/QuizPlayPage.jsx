@@ -166,6 +166,34 @@ function formatDuration(totalSeconds) {
     return `${minutes}분 ${seconds}초`;
 }
 
+function stripMarkdownForSpeech(value) {
+    return String(value ?? "")
+        .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+        .replace(/```[\s\S]*?```/g, "")
+        .replace(/`([^`]+)`/g, "$1")
+        .replace(/[#>*_~\-]/g, "")
+        .replace(/\n{2,}/g, "\n")
+        .trim();
+}
+
+function buildAnswerSpeechText(problem) {
+    const explanation = stripMarkdownForSpeech(problem?.explanationText);
+    const answer = stripMarkdownForSpeech(problem?.answerText);
+
+    const parts = [];
+
+    if (explanation) {
+        parts.push(`해설입니다. ${explanation}`);
+    }
+
+    if (answer) {
+        parts.push(`정답입니다. ${answer}`);
+    }
+
+    return parts.join("\n\n");
+}
+
 function getPathItemName(item) {
     if (typeof item === "string") {
         return item.trim();
@@ -374,6 +402,7 @@ export default function QuizPlayPage() {
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
 
     const [questionStartedAt, setQuestionStartedAt] = useState(Date.now());
     const [submitting, setSubmitting] = useState(false);
@@ -527,8 +556,21 @@ export default function QuizPlayPage() {
             setQuestionStartedAt(Date.now());
             setSubmissionError("");
             setTimeAdjustError("");
+
+            if ("speechSynthesis" in window) {
+                window.speechSynthesis.cancel();
+                setIsSpeaking(false);
+            }
         }
     }, [currentIndex, loading, problems.length, showCompleteScreen]);
+
+    useEffect(() => {
+        return () => {
+            if ("speechSynthesis" in window) {
+                window.speechSynthesis.cancel();
+            }
+        };
+    }, []);
 
     const handleExit = () => {
         navigate("/");
@@ -712,6 +754,47 @@ export default function QuizPlayPage() {
         }
 
         await submitCurrentProblemAndGoNext(elapsedSeconds);
+    };
+
+    const handleSpeakAnswer = () => {
+        if (!("speechSynthesis" in window)) {
+            setSubmissionError("현재 브라우저에서는 음성 읽기를 지원하지 않습니다.");
+            return;
+        }
+
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+            return;
+        }
+
+        const speechText = buildAnswerSpeechText(problem);
+
+        if (!speechText) {
+            setSubmissionError("읽을 정답 또는 해설이 없습니다.");
+            return;
+        }
+
+        setShowAnswer(true);
+
+        const utterance = new SpeechSynthesisUtterance(speechText);
+
+        utterance.lang = "ko-KR";
+        utterance.rate = 0.95;
+        utterance.pitch = 0.9; //음성 높낮이
+        utterance.volume = 1;
+
+        utterance.onend = () => {
+            setIsSpeaking(false);
+        };
+
+        utterance.onerror = () => {
+            setIsSpeaking(false);
+        };
+
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+        setIsSpeaking(true);
     };
 
     const handleTimeAdjustSubmit = async () => {
@@ -899,21 +982,40 @@ export default function QuizPlayPage() {
             )}
 
             {showAnswer && (
-                <div style={answerCardStyle}>
-                    <div style={{ marginBottom: 20 }}>
-                        <div style={{ marginBottom: 6, fontWeight: 600 }}>해설</div>
+                <div>
+                    <div style={answerCardStyle}>
+                        <div style={{ marginBottom: 20 }}>
+                            <div style={{ marginBottom: 6, fontWeight: 600 }}>해설</div>
 
-                        <div className="quiz-markdown" style={explanationTextStyle}>
-                            <MarkdownContent value={problem.explanationText} />
+                            <div style={explanationTextStyle}>
+                                <MarkdownContent value={problem.explanationText} />
+                            </div>
+                        </div>
+
+                        <div>
+                            <div style={{ marginBottom: 6, fontWeight: 600 }}>정답</div>
+
+                            <div style={answerTextStyle}>
+                                <MarkdownContent value={problem.answerText} />
+                            </div>
                         </div>
                     </div>
 
-                    <div>
-                        <div style={{ marginBottom: 6, fontWeight: 600 }}>정답</div>
-
-                        <div className="quiz-markdown" style={answerTextStyle}>
-                            <MarkdownContent value={problem.answerText} />
-                        </div>
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            marginTop: -8,
+                            marginBottom: 16,
+                        }}
+                    >
+                        <button
+                            style={getButtonStyle(false)}
+                            onClick={handleSpeakAnswer}
+                        >
+                            {isSpeaking ? "읽기 중지" : "정답 읽기"}
+                        </button>
                     </div>
                 </div>
             )}
@@ -947,6 +1049,13 @@ export default function QuizPlayPage() {
                 >
                     {submitting ? "제출 중..." : "다음 문제"}
                 </button>
+
+                {/*<button*/}
+                {/*    style={getButtonStyle(false)}*/}
+                {/*    onClick={handleSpeakAnswer}*/}
+                {/*>*/}
+                {/*    {isSpeaking ? "읽기 중지" : "정답 읽기"}*/}
+                {/*</button>*/}
             </div>
 
             <div
