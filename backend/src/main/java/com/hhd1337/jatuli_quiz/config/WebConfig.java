@@ -13,6 +13,8 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedOrigins(
                         "http://localhost:3000",
                         "http://localhost:5173",
+                        "http://10.30.5.111:5173",
+                        "http://192.168.0.26:5173",
                         "https://jatuli.online",
                         "https://www.jatuli.online",
                         "https://jatuli-quiz-frontend.vercel.app",

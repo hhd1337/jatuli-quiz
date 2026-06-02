@@ -129,7 +129,9 @@ function getFolderProgressPercent(solvedCount, totalCount) {
     return getPercent(Math.round((solvedCount / totalCount) * 100));
 }
 
-function formatRoundedMinutes(timeText) {
+function formatCompactTime(timeText) {
+    if (!timeText) return "0s";
+
     const hourMatch = timeText.match(/(\d+)시간/);
     const minuteMatch = timeText.match(/(\d+)분/);
     const secondMatch = timeText.match(/(\d+)초/);
@@ -138,19 +140,51 @@ function formatRoundedMinutes(timeText) {
     const minutes = minuteMatch ? Number(minuteMatch[1]) : 0;
     const seconds = secondMatch ? Number(secondMatch[1]) : 0;
 
-    const totalMinutes = Math.round(hours * 60 + minutes + seconds / 60);
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
 
-    if (totalMinutes <= 0) return "0m";
-
-    if (totalMinutes >= 60) {
-        const roundedHours = Math.floor(totalMinutes / 60);
-        const remainMinutes = totalMinutes % 60;
-
-        if (remainMinutes === 0) return `${roundedHours}h`;
-        return `${roundedHours}h ${remainMinutes}m`;
+    if (totalSeconds <= 0) {
+        return (
+            <>
+                0<span style={{ fontSize: "0.5em" }}>s</span>
+            </>
+        );
     }
 
-    return `${totalMinutes}m`;
+    const displayHours = Math.floor(totalSeconds / 3600);
+    const displayMinutes = Math.floor((totalSeconds % 3600) / 60);
+    const displaySeconds = totalSeconds % 60;
+
+    const unitStyle = {
+        fontSize: "0.5em",
+        verticalAlign: "baseline",
+    };
+
+    if (displayHours > 0) {
+        return (
+            <>
+                {displayHours}
+                <span style={unitStyle}>h</span>
+                {String(displayMinutes).padStart(2, "0")}
+            </>
+        );
+    }
+
+    if (displayMinutes > 0) {
+        return (
+            <>
+                {displayMinutes}
+                <span style={unitStyle}>m</span>
+                {String(displaySeconds).padStart(2, "0")}
+            </>
+        );
+    }
+
+    return (
+        <>
+            {displaySeconds}
+            <span style={unitStyle}>s</span>
+        </>
+    );
 }
 
 function getStreakMarks(streakDays) {
@@ -1049,16 +1083,18 @@ export default function HomePage() {
                             </h2>
                         </div>
 
-                        <div
+                        <p
                             style={{
+                                ...mutedTextStyle,
+                                marginTop: 0,
+                                marginBottom: 0,
+                                fontSize: 13,
                                 color: "var(--color-primary)",
-                                fontSize: 14,
-                                fontWeight: 800,
-                                whiteSpace: "nowrap",
                             }}
                         >
-                            {isGoalCompleted ? "목표 달성" : "진행 중"}
-                        </div>
+                            누적 {summary.solvedCountTotal}문제 /{" "}
+                            {summary.accumulatedFocusTimeText} 저축
+                        </p>
                     </div>
 
                     <div
@@ -1075,7 +1111,8 @@ export default function HomePage() {
                             valueColor="var(--color-accent-strong)"
                             description={
                                 isGoalCompleted
-                                    ? `목표 ${exceededGoalCount}문제 초과`
+                                    // ? `🎉 목표달성 🎉 ${exceededGoalCount}문제 초과`
+                                    ? `🎉 목표달성 🎉`
                                     : `목표까지 ${Math.max(
                                         0,
                                         todayGoalCount - todayGoalSolvedCount
@@ -1085,7 +1122,7 @@ export default function HomePage() {
 
                         <MetricCard
                             label="오늘 저축 시간"
-                            value={formatRoundedMinutes(summary.todayFocusTimeText)}
+                            value={formatCompactTime(summary.todayFocusTimeText)}
                             valueColor="var(--color-accent-strong)"
                             description={formatAverageTimePerProblem(
                                 summary.todayFocusTimeText,
@@ -1095,32 +1132,17 @@ export default function HomePage() {
 
                         <MetricCard
                             label="연속 도전"
-                            value={`${summary.streakDays}일`}
+                            value={
+                                <>
+                                    {summary.streakDays}
+                                    <span style={{ fontSize: "0.5em" }}>일</span>
+                                </>
+                            }
                             valueColor="var(--color-accent-strong)"
                             description={getStreakMarks(summary.streakDays)}
                         />
                     </div>
 
-                    <div
-                        style={{
-                            borderTop: "1px solid var(--color-border)",
-                            paddingTop: 4,
-                            marginLeft: 4
-                        }}
-                    >
-                        <p
-                            style={{
-                                ...mutedTextStyle,
-                                marginTop: 0,
-                                marginBottom: 0,
-                                fontSize: 14,
-                                color: "var(--color-primary)",
-                            }}
-                        >
-                            누적 {summary.solvedCountTotal}문제 ·{" "}
-                            {summary.accumulatedFocusTimeText} 저축
-                        </p>
-                    </div>
                 </div>
             </section>
 
