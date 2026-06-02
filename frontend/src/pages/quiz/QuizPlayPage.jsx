@@ -24,7 +24,7 @@ const mutedTextStyle = {
 };
 
 const hrStyle = {
-    margin: "16px 0",
+    margin: "1px 0 15px",
     border: "none",
     borderTop: "1px solid var(--color-border, #374151)",
 };
@@ -38,6 +38,57 @@ const answerCardStyle = {
     borderRadius: 12,
     padding: "clamp(14px, 3.5vw, 16px)",
     marginBottom: 16,
+};
+
+const titleParentPathStyle = {
+    margin: 0,
+    color: "var(--color-text-muted, #9ca3af)",
+    fontSize: "clamp(11px, 3.2vw, 13px)",
+    lineHeight: 1.35,
+    wordBreak: "break-all",
+    overflowWrap: "anywhere",
+};
+
+const titleMainStyle = {
+    margin: 0,
+    color: "var(--color-text, #f9fafb)",
+    fontSize: "clamp(18px, 5vw, 22px)",
+    lineHeight: 1.35,
+    fontWeight: 700,
+    wordBreak: "break-all",
+    overflowWrap: "anywhere",
+};
+
+const progressCountStyle = {
+    ...mutedTextStyle,
+    fontSize: "clamp(15px, 5vw, 15px)",
+    lineHeight: 1,
+    paddingTop: 6,
+    marginBottom: 5,
+    flexShrink: 0,
+};
+
+const questionTextStyle = {
+    fontSize: "clamp(13px, 4.5vw, 16px)",
+    lineHeight: 1.35,
+    fontWeight: 600,
+    wordBreak: "break-all",
+    overflowWrap: "anywhere",
+};
+
+const explanationTextStyle = {
+    fontSize: "clamp(12px, 4vw, 14px)",
+    lineHeight: 1.45,
+    wordBreak: "break-all",
+    overflowWrap: "anywhere",
+};
+
+const answerTextStyle = {
+    fontSize: "clamp(12px, 4vw, 14px)",
+    lineHeight: 1.35,
+    fontWeight: 300,
+    wordBreak: "break-all",
+    overflowWrap: "anywhere",
 };
 
 const modalCardStyle = {
@@ -225,6 +276,41 @@ function getProblemTitlePath(problem, fallbackTitlePath = "문제 풀이") {
     return normalizePathText(fallbackTitlePath) || "문제 풀이";
 }
 
+function splitTitlePath(titlePathValue) {
+    const normalizedPath = normalizePathText(titlePathValue);
+
+    if (!normalizedPath) {
+        return {
+            parentPath: "",
+            currentTitle: "문제 풀이",
+        };
+    }
+
+    const parts = normalizedPath
+        .split("/")
+        .map((part) => part.trim())
+        .filter(Boolean);
+
+    if (parts.length === 0) {
+        return {
+            parentPath: "",
+            currentTitle: "문제 풀이",
+        };
+    }
+
+    if (parts.length === 1) {
+        return {
+            parentPath: "",
+            currentTitle: parts[0],
+        };
+    }
+
+    return {
+        parentPath: `${parts.slice(0, -1).join(" / ")} /`,
+        currentTitle: parts[parts.length - 1],
+    };
+}
+
 export default function QuizPlayPage() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -252,7 +338,6 @@ export default function QuizPlayPage() {
         !!mode && !isBookmarkMode && !isRandomMode && !isFolderMode;
 
     const initialTitlePath = location.state?.titlePath ?? "";
-    const parentFolderId = location.state?.parentFolderId ?? null;
 
     const [isMusicOn, setIsMusicOn] = useState(false);
     const [localProblems, setLocalProblems] = useState([]);
@@ -420,28 +505,10 @@ export default function QuizPlayPage() {
     }, [currentIndex, loading, problems.length, showCompleteScreen]);
 
     const handleExit = () => {
-        if (isBookmarkMode || isRandomMode || isUnsupportedMode) {
-            navigate("/");
-            return;
-        }
-
-        if (parentFolderId) {
-            navigate(`/folders/${parentFolderId}`);
-            return;
-        }
-
         navigate("/");
     };
 
     const getExitButtonText = () => {
-        if (isBookmarkMode || isRandomMode || isUnsupportedMode) {
-            return "홈으로";
-        }
-
-        if (parentFolderId) {
-            return "폴더 나가기";
-        }
-
         return "홈으로";
     };
 
@@ -714,6 +781,7 @@ export default function QuizPlayPage() {
         problem,
         titlePath || "문제 풀이"
     );
+    const { parentPath, currentTitle } = splitTitlePath(currentTitlePath);
 
     const isPrevDisabled = currentIndex === 0 || submitting;
     const isNextDisabled = submitting;
@@ -725,36 +793,44 @@ export default function QuizPlayPage() {
                 style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    alignItems: "baseline",
+                    alignItems: "flex-end",
                     gap: 16,
                 }}
             >
                 <div
                     style={{
                         display: "flex",
-                        alignItems: "center",
-                        gap: 8,
+                        flexDirection: "column",
                         minWidth: 0,
+                        flex: 1,
                     }}
                 >
-                    <h1
+                    {parentPath && (
+                        <p style={titleParentPathStyle}>
+                            {parentPath}
+                        </p>
+                    )}
+
+                    <div
                         style={{
-                            margin: 0,
-                            fontSize: 20,
-                            lineHeight: 1.4,
-                            wordBreak: "keep-all",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            minWidth: 0,
                         }}
                     >
-                        {currentTitlePath} [{problem.questionNo}번]
-                    </h1>
+                        <h1 style={titleMainStyle}>
+                            {currentTitle} [{problem.questionNo}번]
+                        </h1>
 
-                    <BookmarkToggleButton
-                        isBookmarked={!!problem?.meta?.isBookmarked}
-                        onClick={toggleBookmark}
-                    />
+                        <BookmarkToggleButton
+                            isBookmarked={!!problem?.meta?.isBookmarked}
+                            onClick={toggleBookmark}
+                        />
+                    </div>
                 </div>
 
-                <div style={mutedTextStyle}>
+                <div style={progressCountStyle}>
                     {currentIndex + 1} / {problems.length}
                 </div>
             </div>
@@ -767,13 +843,14 @@ export default function QuizPlayPage() {
                         display: "flex",
                         alignItems: "flex-start",
                         gap: 6,
-                        fontSize: 18,
-                        fontWeight: 600,
                     }}
                 >
                     <span style={{ flexShrink: 0, lineHeight: 1.7 }}>💁‍♂</span>
 
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                        className="quiz-markdown"
+                        style={{ flex: 1, minWidth: 0, ...questionTextStyle }}
+                    >
                         <MarkdownContent value={problem.questionText} />
                     </div>
                 </div>
@@ -801,12 +878,18 @@ export default function QuizPlayPage() {
                 <div style={answerCardStyle}>
                     <div style={{ marginBottom: 20 }}>
                         <div style={{ marginBottom: 6, fontWeight: 600 }}>해설</div>
-                        <MarkdownContent value={problem.explanationText} />
+
+                        <div className="quiz-markdown" style={explanationTextStyle}>
+                            <MarkdownContent value={problem.explanationText} />
+                        </div>
                     </div>
 
                     <div>
                         <div style={{ marginBottom: 6, fontWeight: 600 }}>정답</div>
-                        <MarkdownContent value={problem.answerText} />
+
+                        <div className="quiz-markdown" style={answerTextStyle}>
+                            <MarkdownContent value={problem.answerText} />
+                        </div>
                     </div>
                 </div>
             )}

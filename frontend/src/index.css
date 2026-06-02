@@ -73,3 +73,19 @@ body {
     padding: 0;
     text-align: initial;
 }
+
+.quiz-markdown {
+    line-height: inherit;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+}
+
+.quiz-markdown :where(p, ul, ol, blockquote, pre) {
+    margin-top: 0;
+    margin-bottom: 0.35em;
+    line-height: inherit;
+}
+
+.quiz-markdown :where(p:last-child, ul:last-child, ol:last-child, blockquote:last-child, pre:last-child) {
+    margin-bottom: 0;
+}
