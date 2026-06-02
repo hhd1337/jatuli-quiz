@@ -11,9 +11,12 @@ import MarkdownContent from "../../shared/components/MarkdownContent";
 const TEN_MINUTES_IN_SECONDS = 10 * 60;
 
 const pageStyle = {
+    width: "100%",
     maxWidth: 800,
     margin: "0 auto",
+    padding: "24px clamp(8px, 3vw, 20px) 72px",
     color: "var(--color-text, #f9fafb)",
+    boxSizing: "border-box",
 };
 
 const mutedTextStyle = {
@@ -27,11 +30,13 @@ const hrStyle = {
 };
 
 const answerCardStyle = {
+    width: "100%",
+    boxSizing: "border-box",
     border: "1px solid var(--color-border, #374151)",
     background: "var(--color-surface, #1f2937)",
     color: "var(--color-text, #f9fafb)",
     borderRadius: 12,
-    padding: 16,
+    padding: "clamp(14px, 3.5vw, 16px)",
     marginBottom: 16,
 };
 
