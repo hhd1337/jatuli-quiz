@@ -59,3 +59,20 @@ export async function importProblemsText({ folderId, rawText }) {
             : [],
     };
 }
+
+export async function toggleProblemBookmark(problemId) {
+    if (!problemId) {
+        throw new Error("problemId is required");
+    }
+
+    const response = await apiClient.post(
+        `/api/v1/problems/${problemId}/bookmark`
+    );
+
+    const result = response.data.result ?? {};
+
+    return {
+        problemId: result.problemId ?? problemId,
+        isBookmarked: !!result.isBookmarked,
+    };
+}

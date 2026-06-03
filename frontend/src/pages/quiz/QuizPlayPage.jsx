@@ -8,6 +8,7 @@ import { getFolderPractice } from "../../shared/api/folderApi";
 import {
     getBookmarkedPractice,
     submitProblemSubmission,
+    toggleProblemBookmark,
 } from "../../shared/api/quizApi";
 import FabGroup from "../../features/fab/FabGroup";
 import MarkdownContent from "../../shared/components/MarkdownContent";
@@ -451,6 +452,9 @@ export default function QuizPlayPage() {
     const [submissionError, setSubmissionError] = useState("");
     const [submittedProblemIds, setSubmittedProblemIds] = useState(() => new Set());
 
+    const [bookmarkSubmitting, setBookmarkSubmitting] = useState(false);
+    const [bookmarkError, setBookmarkError] = useState("");
+
     const [timeAdjustModal, setTimeAdjustModal] = useState({
         open: false,
         elapsedSeconds: 0,
@@ -473,6 +477,7 @@ export default function QuizPlayPage() {
                 setCurrentIndex(0);
                 setShowAnswer(false);
                 setSubmissionError("");
+                setBookmarkError("");
                 setSubmittedProblemIds(new Set());
                 setQuestionStartedAt(Date.now());
 
@@ -597,6 +602,7 @@ export default function QuizPlayPage() {
         if (!loading && problems.length > 0 && !showCompleteScreen) {
             setQuestionStartedAt(Date.now());
             setSubmissionError("");
+            setBookmarkError("");
             setTimeAdjustError("");
 
             if ("speechSynthesis" in window) {
@@ -706,20 +712,60 @@ export default function QuizPlayPage() {
         setShowAnswer(false);
     };
 
-    const toggleBookmark = () => {
+    const updateProblemBookmarkState = (targetProblemId, isBookmarked) => {
         setLocalProblems((prev) =>
-            prev.map((p, idx) => {
-                if (idx !== currentIndex) return p;
+            prev.map((p) => {
+                if (String(p.problemId) !== String(targetProblemId)) {
+                    return p;
+                }
 
                 return {
                     ...p,
                     meta: {
                         ...p.meta,
-                        isBookmarked: !p.meta?.isBookmarked,
+                        isBookmarked,
                     },
                 };
             })
         );
+    };
+
+    const handleToggleBookmark = async () => {
+        if (bookmarkSubmitting || nextSplashOpen) return;
+
+        const problem = problems[currentIndex];
+
+        if (!problem?.problemId) {
+            setBookmarkError("문제 ID가 없어 북마크 상태를 변경할 수 없습니다.");
+            return;
+        }
+
+        const problemId = problem.problemId;
+        const previousBookmarked = !!problem.meta?.isBookmarked;
+        const optimisticBookmarked = !previousBookmarked;
+
+        try {
+            setBookmarkSubmitting(true);
+            setBookmarkError("");
+
+            // 클릭 즉시 아이콘 상태를 먼저 바꿔서 반응성을 좋게 만든다.
+            updateProblemBookmarkState(problemId, optimisticBookmarked);
+
+            // 서버에 실제 북마크 토글 요청
+            const result = await toggleProblemBookmark(problemId);
+
+            // 서버가 내려준 최신 상태로 다시 동기화
+            updateProblemBookmarkState(problemId, result.isBookmarked);
+        } catch (err) {
+            console.error("북마크 토글 실패:", err);
+
+            // 실패하면 원래 상태로 되돌린다.
+            updateProblemBookmarkState(problemId, previousBookmarked);
+
+            setBookmarkError("북마크 상태를 변경하지 못했습니다. 다시 시도해주세요.");
+        } finally {
+            setBookmarkSubmitting(false);
+        }
     };
 
     const goEdit = () => {
@@ -1112,6 +1158,17 @@ export default function QuizPlayPage() {
                     {submissionError}
                 </p>
             )}
+
+            {bookmarkError && (
+                <p
+                    style={{
+                        color: "var(--color-danger, #fca5a5)",
+                        marginTop: 0,
+                    }}
+                >
+                    {bookmarkError}
+                </p>
+            )}
             <div
                 onClick={(e) => e.stopPropagation()}
                 style={bottomLeftControlsStyle}
@@ -1146,7 +1203,8 @@ export default function QuizPlayPage() {
             >
                 <BookmarkToggleButton
                     isBookmarked={!!problem?.meta?.isBookmarked}
-                    onClick={toggleBookmark}
+                    onClick={handleToggleBookmark}
+                    disabled={bookmarkSubmitting || nextSplashOpen}
                 />
             </div>
 
@@ -1280,14 +1338,18 @@ export default function QuizPlayPage() {
     );
 }
 
-function BookmarkToggleButton({ isBookmarked, onClick }) {
+function BookmarkToggleButton({ isBookmarked, onClick, disabled = false }) {
     return (
         <button
             type="button"
             onClick={(e) => {
                 e.stopPropagation();
+
+                if (disabled) return;
+
                 onClick();
             }}
+            disabled={disabled}
             aria-label={isBookmarked ? "북마크 해제" : "북마크 추가"}
             title={isBookmarked ? "북마크 해제" : "북마크 추가"}
             style={{
@@ -1301,7 +1363,8 @@ function BookmarkToggleButton({ isBookmarked, onClick }) {
                 color: isBookmarked
                     ? "var(--color-primary, #f59e0b)"
                     : "var(--color-text-muted, #9ca3af)",
-                cursor: "pointer",
+                cursor: disabled ? "not-allowed" : "pointer",
+                opacity: disabled ? 0.6 : 1,
                 padding: 0,
                 flexShrink: 0,
             }}
