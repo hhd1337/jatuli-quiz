@@ -39,6 +39,7 @@ function normalizeFolderChildren(raw) {
                         0
                     ),
                     isLeaf: folder.isLeaf ?? !folder.hasChildren,
+                    sortOrder: folder.sortOrder ?? null,
                 })),
             },
         ],
@@ -64,6 +65,31 @@ export async function createFolder({ parentFolderId, name }) {
         parentFolderId,
         name,
     });
+
+    return response.data.result;
+}
+
+export async function renameFolder({ folderId, name }) {
+    const response = await apiClient.patch(`/api/v1/folders/${folderId}/name`, {
+        name,
+    });
+
+    return response.data.result;
+}
+
+export async function deleteFolder(folderId) {
+    const response = await apiClient.delete(`/api/v1/folders/${folderId}`);
+
+    return response.data.result;
+}
+
+export async function reorderChildFolders({ parentFolderId, orderedFolderIds }) {
+    const response = await apiClient.patch(
+        `/api/v1/folders/${parentFolderId}/children/order`,
+        {
+            orderedFolderIds,
+        }
+    );
 
     return response.data.result;
 }

@@ -1,7 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getHomeData } from "../../shared/api/homeApi";
-import { createFolder } from "../../shared/api/folderApi";
+import {
+    createFolder,
+    renameFolder,
+    deleteFolder,
+    reorderChildFolders,
+} from "../../shared/api/folderApi";
 import { importProblemsText } from "../../shared/api/quizApi";
 
 const pageStyle = {
@@ -398,6 +403,14 @@ function FolderTreeItem({
                             parentFolderId = null,
                             isManageMode,
 
+                            siblings = [],
+                            indexInSiblings = 0,
+                            orderParentFolderId,
+
+                            onRenameFolder,
+                            onDeleteFolder,
+                            onMoveFolder,
+
                             creatingParentFolder,
                             newFolderName,
                             setNewFolderName,
@@ -423,6 +436,8 @@ function FolderTreeItem({
     const totalCount = Number(folder.totalCount ?? 0);
     const hasOwnProblems = isLeaf && totalCount > 0;
     const canAddChildFolder = !hasOwnProblems;
+    const canMoveUp = indexInSiblings > 0;
+    const canMoveDown = indexInSiblings < siblings.length - 1;
 
     function handleClick() {
         if (hasChildren) {
@@ -595,30 +610,73 @@ function FolderTreeItem({
 
                                     <button
                                         type="button"
-                                        onClick={() => alert("폴더 이름 변경 API가 아직 없습니다.")}
+                                        onClick={() => onRenameFolder(folder)}
+                                        disabled={submitting}
                                         style={{
                                             ...folderActionButtonStyle,
                                             width: "100%",
                                             borderRadius: 8,
-                                            opacity: 0.5,
-                                            cursor: "not-allowed",
                                         }}
                                     >
-                                        이름 변경 준비중
+                                        이름 변경
                                     </button>
 
                                     <button
                                         type="button"
-                                        onClick={() => alert("폴더 삭제 API가 아직 없습니다.")}
+                                        onClick={() =>
+                                            onMoveFolder({
+                                                parentFolderId: orderParentFolderId,
+                                                siblings,
+                                                fromIndex: indexInSiblings,
+                                                direction: "UP",
+                                            })
+                                        }
+                                        disabled={!canMoveUp || submitting}
                                         style={{
                                             ...folderActionButtonStyle,
                                             width: "100%",
                                             borderRadius: 8,
-                                            opacity: 0.5,
-                                            cursor: "not-allowed",
+                                            opacity: canMoveUp ? 1 : 0.45,
+                                            cursor: canMoveUp ? "pointer" : "not-allowed",
                                         }}
                                     >
-                                        삭제 준비중
+                                        위로 이동
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            onMoveFolder({
+                                                parentFolderId: orderParentFolderId,
+                                                siblings,
+                                                fromIndex: indexInSiblings,
+                                                direction: "DOWN",
+                                            })
+                                        }
+                                        disabled={!canMoveDown || submitting}
+                                        style={{
+                                            ...folderActionButtonStyle,
+                                            width: "100%",
+                                            borderRadius: 8,
+                                            opacity: canMoveDown ? 1 : 0.45,
+                                            cursor: canMoveDown ? "pointer" : "not-allowed",
+                                        }}
+                                    >
+                                        아래로 이동
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => onDeleteFolder(folder)}
+                                        disabled={submitting}
+                                        style={{
+                                            ...folderActionButtonStyle,
+                                            width: "100%",
+                                            borderRadius: 8,
+                                            color: "#fca5a5",
+                                        }}
+                                    >
+                                        삭제
                                     </button>
                                 </div>
                             )}
@@ -682,7 +740,7 @@ function FolderTreeItem({
                         borderLeft: "1px solid var(--color-border)",
                     }}
                 >
-                    {children.map((child) => (
+                    {children.map((child, index) => (
                         <FolderTreeItem
                             key={child.folderId}
                             folder={child}
@@ -693,6 +751,14 @@ function FolderTreeItem({
                             pathNames={currentPathNames}
                             parentFolderId={folder.folderId}
                             isManageMode={isManageMode}
+
+                            siblings={children}
+                            indexInSiblings={index}
+                            orderParentFolderId={folder.folderId}
+
+                            onRenameFolder={onRenameFolder}
+                            onDeleteFolder={onDeleteFolder}
+                            onMoveFolder={onMoveFolder}
 
                             creatingParentFolder={creatingParentFolder}
                             newFolderName={newFolderName}
@@ -730,6 +796,7 @@ function collectFolderIdsWithChildren(folders = []) {
 }
 
 const COLLAPSED_FOLDER_IDS_STORAGE_KEY = "jatuli.home.collapsedFolderIds";
+const ROOT_FOLDER_ID = 1;
 
 function readCollapsedFolderIdsFromStorage() {
     try {
@@ -763,6 +830,21 @@ function saveCollapsedFolderIdsToStorage(collapsedFolderIds) {
     } catch (error) {
         console.error("폴더 접힘 상태 저장 실패:", error);
     }
+}
+
+function getApiErrorMessage(error, fallbackMessage) {
+    return (
+        error?.response?.data?.message ||
+        error?.response?.data?.result?.message ||
+        fallbackMessage
+    );
+}
+
+function moveItem(array, fromIndex, toIndex) {
+    const copied = [...array];
+    const [removed] = copied.splice(fromIndex, 1);
+    copied.splice(toIndex, 0, removed);
+    return copied;
 }
 
 export default function HomePage() {
@@ -868,6 +950,114 @@ export default function HomePage() {
         } catch (err) {
             console.error("폴더 추가 실패:", err);
             alert("폴더 추가에 실패했습니다.");
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function handleRenameFolder(folder) {
+        const nextName = window.prompt("새 폴더 이름을 입력하세요.", folder.name);
+
+        if (nextName === null) return;
+
+        const trimmedName = nextName.trim();
+
+        if (!trimmedName) {
+            alert("폴더 이름을 입력해주세요.");
+            return;
+        }
+
+        if (trimmedName === folder.name) {
+            setOpenedMenuFolderId(null);
+            return;
+        }
+
+        try {
+            setSubmitting(true);
+            setOpenedMenuFolderId(null);
+
+            await renameFolder({
+                folderId: folder.folderId,
+                name: trimmedName,
+            });
+
+            await fetchHomeData();
+        } catch (err) {
+            console.error("폴더 이름 변경 실패:", err);
+            alert(getApiErrorMessage(err, "폴더 이름 변경에 실패했습니다."));
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function handleDeleteFolder(folder) {
+        const hasChildren = Array.isArray(folder.children) && folder.children.length > 0;
+        const totalCount = Number(folder.totalCount ?? 0);
+
+        if (hasChildren) {
+            alert("하위 폴더가 있는 폴더는 삭제할 수 없습니다.");
+            return;
+        }
+
+        if (totalCount > 0) {
+            alert("문제가 있는 폴더는 삭제할 수 없습니다.");
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `'${folder.name}' 폴더를 삭제할까요?`
+        );
+
+        if (!confirmed) return;
+
+        try {
+            setSubmitting(true);
+            setOpenedMenuFolderId(null);
+
+            await deleteFolder(folder.folderId);
+
+            await fetchHomeData();
+        } catch (err) {
+            console.error("폴더 삭제 실패:", err);
+            alert(getApiErrorMessage(err, "폴더 삭제에 실패했습니다."));
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function handleMoveFolder({
+                                        parentFolderId,
+                                        siblings,
+                                        fromIndex,
+                                        direction,
+                                    }) {
+        if (!parentFolderId) {
+            alert("부모 폴더 정보를 찾을 수 없습니다.");
+            return;
+        }
+
+        const toIndex = direction === "UP" ? fromIndex - 1 : fromIndex + 1;
+
+        if (toIndex < 0 || toIndex >= siblings.length) {
+            return;
+        }
+
+        const reorderedFolders = moveItem(siblings, fromIndex, toIndex);
+        const orderedFolderIds = reorderedFolders.map((folder) => folder.folderId);
+
+        try {
+            setSubmitting(true);
+            setOpenedMenuFolderId(null);
+
+            await reorderChildFolders({
+                parentFolderId,
+                orderedFolderIds,
+            });
+
+            await fetchHomeData();
+        } catch (err) {
+            console.error("폴더 순서 변경 실패:", err);
+            alert(getApiErrorMessage(err, "폴더 순서 변경에 실패했습니다."));
         } finally {
             setSubmitting(false);
         }
@@ -1361,6 +1551,14 @@ export default function HomePage() {
                                     pathNames={[]}
                                     parentFolderId={null}
                                     isManageMode={isManageMode}
+
+                                    siblings={rootFolders}
+                                    indexInSiblings={index}
+                                    orderParentFolderId={ROOT_FOLDER_ID}
+
+                                    onRenameFolder={handleRenameFolder}
+                                    onDeleteFolder={handleDeleteFolder}
+                                    onMoveFolder={handleMoveFolder}
 
                                     creatingParentFolder={creatingParentFolder}
                                     newFolderName={newFolderName}
