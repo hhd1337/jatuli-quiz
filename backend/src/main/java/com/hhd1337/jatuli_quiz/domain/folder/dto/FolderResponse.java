@@ -35,6 +35,7 @@ public class FolderResponse {
             private Integer solved;
             private Integer total;
             private Boolean hasChildren;
+            private Integer sortOrder;
         }
     }
 
@@ -77,5 +78,44 @@ public class FolderResponse {
         private String fullPath;
         private Integer depth;
         private Integer problemCount;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RenameFolderResponse {
+        private Long folderId;
+        private Long parentFolderId;
+        private String name;
+        private String fullPath;
+        private Integer depth;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DeleteFolderResponse {
+        private Long folderId;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ReorderFoldersResponse {
+        private Long parentFolderId;
+        private List<ReorderedFolderDTO> folders;
+
+        @Getter
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class ReorderedFolderDTO {
+            private Long folderId;
+            private String name;
+            private Integer sortOrder;
+        }
     }
 }

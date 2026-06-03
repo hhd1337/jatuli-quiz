@@ -19,7 +19,12 @@ public enum ErrorStatus implements BaseErrorCode {
     // 폴더 관련 에러
     FOLDER_NOT_FOUND(HttpStatus.NOT_FOUND, "FOLDER4041", "존재하지 않는 폴더입니다."),
     FOLDER_NOT_LEAF(HttpStatus.BAD_REQUEST, "FOLDER4001", "연습 문제 조회는 leaf 폴더에서만 가능합니다."),
-    DUPLICATE_FOLDER_NAME(HttpStatus.BAD_REQUEST, "FOLDER4001", "같은 부모 폴더 아래에 동일한 이름의 폴더가 이미 존재합니다."),
+    DUPLICATE_FOLDER_NAME(HttpStatus.BAD_REQUEST, "FOLDER4002", "같은 부모 폴더 아래에 동일한 이름의 폴더가 이미 존재합니다."),
+    ROOT_FOLDER_CANNOT_BE_MODIFIED(HttpStatus.BAD_REQUEST, "FOLDER4003", "루트 폴더는 수정하거나 삭제할 수 없습니다."),
+    FOLDER_HAS_CHILDREN(HttpStatus.BAD_REQUEST, "FOLDER4004", "하위 폴더가 존재하는 폴더는 삭제할 수 없습니다."),
+    FOLDER_HAS_PROBLEMS(HttpStatus.BAD_REQUEST, "FOLDER4005", "문제가 존재하는 폴더는 삭제할 수 없습니다."),
+    INVALID_FOLDER_ORDER(HttpStatus.BAD_REQUEST, "FOLDER4006", "올바르지 않은 폴더 순서 요청입니다."),
+
 
     // 문제 관련 에러
     PROBLEM_NOT_FOUND(HttpStatus.NOT_FOUND, "PROBLEM4041", "존재하지 않는 문제입니다."),

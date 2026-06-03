@@ -34,7 +34,8 @@ public class FolderQueryServiceImpl implements FolderQueryService {
 
         List<FolderChildrenResponse.BreadcrumbDTO> breadcrumb = buildBreadcrumb(currentFolder);
 
-        List<Folder> childFolders = folderRepository.findByParentFolder_FolderIdOrderByFolderIdAsc(folderId);
+        List<Folder> childFolders =
+                folderRepository.findByParentFolder_FolderIdOrderBySortOrderAscFolderIdAsc(folderId);
 
         List<FolderChildrenResponse.FolderDTO> folders = childFolders.stream()
                 .map(this::toFolderDTO)
@@ -71,8 +72,11 @@ public class FolderQueryServiceImpl implements FolderQueryService {
         int total = problemRepository.countByFolder(folder);
         int solved = problemRepository.countByFolderAndSolvedCountGreaterThan(folder, 0);
 
-        List<Folder> children = folderRepository.findByParentFolder_FolderIdOrderByFolderIdAsc(folder.getFolderId());
-
+        List<Folder> children =
+                folderRepository.findByParentFolder_FolderIdOrderBySortOrderAscFolderIdAsc(
+                        folder.getFolderId()
+                );
+        
         for (Folder child : children) {
             FolderStats childStats = calculateFolderStats(child);
             total += childStats.total();

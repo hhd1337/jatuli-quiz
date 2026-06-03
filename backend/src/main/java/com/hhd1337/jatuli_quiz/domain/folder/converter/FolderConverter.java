@@ -43,6 +43,7 @@ public class FolderConverter {
                 .solved(solved)
                 .total(total)
                 .hasChildren(hasChildren)
+                .sortOrder(folder.getSortOrder())
                 .build();
     }
 
@@ -82,6 +83,41 @@ public class FolderConverter {
                 .fullPath(folder.getFullPath())
                 .depth(folder.getDepth())
                 .problemCount(folder.getProblemCount())
+                .build();
+    }
+
+    public static FolderResponse.RenameFolderResponse toRenameFolderResponse(Folder folder) {
+        return FolderResponse.RenameFolderResponse.builder()
+                .folderId(folder.getFolderId())
+                .parentFolderId(folder.getParentFolder().getFolderId())
+                .name(folder.getName())
+                .fullPath(folder.getFullPath())
+                .depth(folder.getDepth())
+                .build();
+    }
+
+    public static FolderResponse.DeleteFolderResponse toDeleteFolderResponse(Long folderId) {
+        return FolderResponse.DeleteFolderResponse.builder()
+                .folderId(folderId)
+                .build();
+    }
+
+    public static FolderResponse.ReorderFoldersResponse toReorderFoldersResponse(
+            Long parentFolderId,
+            List<Folder> folders
+    ) {
+        List<FolderResponse.ReorderFoldersResponse.ReorderedFolderDTO> folderDtos =
+                folders.stream()
+                        .map(folder -> FolderResponse.ReorderFoldersResponse.ReorderedFolderDTO.builder()
+                                .folderId(folder.getFolderId())
+                                .name(folder.getName())
+                                .sortOrder(folder.getSortOrder())
+                                .build())
+                        .toList();
+
+        return FolderResponse.ReorderFoldersResponse.builder()
+                .parentFolderId(parentFolderId)
+                .folders(folderDtos)
                 .build();
     }
 }
