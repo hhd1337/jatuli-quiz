@@ -1457,23 +1457,18 @@ export default function HomePage() {
                     <textarea
                         value={problemImportText}
                         onChange={(e) => setProblemImportText(e.target.value)}
-                        placeholder={`문제1
+                        placeholder={`### 문제 1
+(문제)
 
-                        문제 본문
-                        
-                        해설 해설 본문
-                        
-                        정답 정답 본문
-                        
-                        ---
-                        
-                        문제2
-                        
-                        문제 본문
-                        
-                        해설 해설 본문
-                        
-                        정답 정답 본문`}
+해설
+(자세한 해설)
+
+정답
+(정답)
+
+---
+### 문제 2
+...`}
                         rows={18}
                         style={textareaStyle}
                     />
