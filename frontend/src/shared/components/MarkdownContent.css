@@ -1,11 +1,12 @@
 .markdown-content {
-    line-height: 1.7;
-    word-break: keep-all;
-    overflow-wrap: anywhere;
+    line-height: inherit;
+    word-break: inherit;
+    overflow-wrap: inherit;
 }
 
 .markdown-content p {
-    margin: 0 0 12px;
+    margin: 0 0 4px;
+    line-height: inherit;
 }
 
 .markdown-content p:last-child {

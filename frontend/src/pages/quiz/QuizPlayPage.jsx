@@ -1,4 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Lottie from "lottie-react";
+import successLottie from "../../assets/lottie/success1.json";
+// import successLottie from "../../assets/lottie/success2.json";
+
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { getFolderPractice } from "../../shared/api/folderApi";
 import {
@@ -13,6 +17,7 @@ const TEN_MINUTES_IN_SECONDS = 10 * 60;
 const pageStyle = {
     width: "100%",
     maxWidth: 800,
+    minHeight: "100dvh",
     margin: "0 auto",
     padding: "24px clamp(8px, 3vw, 20px) 72px",
     color: "var(--color-text, #f9fafb)",
@@ -24,7 +29,7 @@ const mutedTextStyle = {
 };
 
 const hrStyle = {
-    margin: "16px 0",
+    margin: "3px 0 15px",
     border: "none",
     borderTop: "1px solid var(--color-border, #374151)",
 };
@@ -38,6 +43,57 @@ const answerCardStyle = {
     borderRadius: 12,
     padding: "clamp(14px, 3.5vw, 16px)",
     marginBottom: 16,
+};
+
+const titleParentPathStyle = {
+    margin: 0,
+    color: "var(--color-text-muted, #9ca3af)",
+    fontSize: "clamp(11px, 3.2vw, 13px)",
+    lineHeight: 1.35,
+    wordBreak: "break-all",
+    overflowWrap: "anywhere",
+};
+
+const titleMainStyle = {
+    margin: 0,
+    color: "var(--color-text-muted, #9ca3af)",
+    fontSize: "clamp(18px, 5vw, 22px)",
+    lineHeight: 1.35,
+    fontWeight: 700,
+    wordBreak: "break-all",
+    overflowWrap: "anywhere",
+};
+
+const progressCountStyle = {
+    ...mutedTextStyle,
+    fontSize: "clamp(15px, 5vw, 15px)",
+    lineHeight: 1,
+    paddingTop: 6,
+    marginBottom: 5,
+    flexShrink: 0,
+};
+
+const questionTextStyle = {
+    fontSize: "clamp(13px, 4.5vw, 16px)",
+    lineHeight: 1.35,
+    fontWeight: 600,
+    wordBreak: "break-all",
+    overflowWrap: "anywhere",
+};
+
+const explanationTextStyle = {
+    fontSize: "clamp(12px, 4vw, 14px)",
+    lineHeight: 1.45,
+    wordBreak: "break-all",
+    overflowWrap: "anywhere",
+};
+
+const answerTextStyle = {
+    fontSize: "clamp(12px, 4vw, 14px)",
+    lineHeight: 1.35,
+    fontWeight: 300,
+    wordBreak: "break-all",
+    overflowWrap: "anywhere",
 };
 
 const modalCardStyle = {
@@ -61,6 +117,62 @@ const inputStyle = {
     borderRadius: 6,
 };
 
+const bottomActionBottom = "calc(20px + env(safe-area-inset-bottom))";
+
+const bottomLeftControlsStyle = {
+    position: "fixed",
+    left: "max(16px, calc((100vw - 800px) / 2 + 16px))",
+    bottom: bottomActionBottom,
+    display: "flex",
+    gap: 8,
+    zIndex: 900,
+};
+
+const bottomBookmarkStyle = {
+    position: "fixed",
+    right: "max(88px, calc((100vw - 800px) / 2 + 88px))",
+    bottom: bottomActionBottom,
+    width: 44,
+    height: 44,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 901,
+};
+
+const NEXT_SPLASH_DURATION_MS = 3200;
+
+const nextSplashOverlayStyle = {
+    position: "fixed",
+    inset: 0,
+    zIndex: 2000,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    backdropFilter: "blur(2px)",
+    pointerEvents: "auto",
+};
+
+const nextSplashCardStyle = {
+    width: 300,
+    minHeight: 200,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 24,
+    border: "1px solid var(--color-border, #374151)",
+    boxShadow: "0 12px 32px rgba(0, 0, 0, 0.35)",
+};
+
+const nextSplashTextStyle = {
+    marginTop: 8,
+    fontSize: 13,
+    fontWeight: 700,
+    color: "var(--color-text, #f9fafb)",
+};
+
 function getButtonStyle(disabled = false) {
     return {
         border: "1px solid var(--color-border, #374151)",
@@ -74,6 +186,8 @@ function getButtonStyle(disabled = false) {
         borderRadius: 6,
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.65 : 1,
+        width: 80,
+        height: 35,
     };
 }
 
@@ -87,6 +201,34 @@ function formatDuration(totalSeconds) {
     const seconds = safeSeconds % 60;
 
     return `${minutes}분 ${seconds}초`;
+}
+
+function stripMarkdownForSpeech(value) {
+    return String(value ?? "")
+        .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+        .replace(/```[\s\S]*?```/g, "")
+        .replace(/`([^`]+)`/g, "$1")
+        .replace(/[#>*_~\-]/g, "")
+        .replace(/\n{2,}/g, "\n")
+        .trim();
+}
+
+function buildAnswerSpeechText(problem) {
+    const explanation = stripMarkdownForSpeech(problem?.explanationText);
+    const answer = stripMarkdownForSpeech(problem?.answerText);
+
+    const parts = [];
+
+    if (explanation) {
+        parts.push(`해설입니다. ${explanation}`);
+    }
+
+    if (answer) {
+        parts.push(`정답입니다. ${answer}`);
+    }
+
+    return parts.join("\n\n");
 }
 
 function getPathItemName(item) {
@@ -225,6 +367,41 @@ function getProblemTitlePath(problem, fallbackTitlePath = "문제 풀이") {
     return normalizePathText(fallbackTitlePath) || "문제 풀이";
 }
 
+function splitTitlePath(titlePathValue) {
+    const normalizedPath = normalizePathText(titlePathValue);
+
+    if (!normalizedPath) {
+        return {
+            parentPath: "",
+            currentTitle: "문제 풀이",
+        };
+    }
+
+    const parts = normalizedPath
+        .split("/")
+        .map((part) => part.trim())
+        .filter(Boolean);
+
+    if (parts.length === 0) {
+        return {
+            parentPath: "",
+            currentTitle: "문제 풀이",
+        };
+    }
+
+    if (parts.length === 1) {
+        return {
+            parentPath: "",
+            currentTitle: parts[0],
+        };
+    }
+
+    return {
+        parentPath: `${parts.slice(0, -1).join(" / ")} /`,
+        currentTitle: parts[parts.length - 1],
+    };
+}
+
 export default function QuizPlayPage() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -252,7 +429,6 @@ export default function QuizPlayPage() {
         !!mode && !isBookmarkMode && !isRandomMode && !isFolderMode;
 
     const initialTitlePath = location.state?.titlePath ?? "";
-    const parentFolderId = location.state?.parentFolderId ?? null;
 
     const [isMusicOn, setIsMusicOn] = useState(false);
     const [localProblems, setLocalProblems] = useState([]);
@@ -263,6 +439,12 @@ export default function QuizPlayPage() {
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
+
+    const [nextSplashOpen, setNextSplashOpen] = useState(false);
+    const [splashMessage, setSplashMessage] = useState("좋아요!");
+    const nextSplashTimerRef = useRef(null);
+
+    const [isSpeaking, setIsSpeaking] = useState(false);
 
     const [questionStartedAt, setQuestionStartedAt] = useState(Date.now());
     const [submitting, setSubmitting] = useState(false);
@@ -416,32 +598,35 @@ export default function QuizPlayPage() {
             setQuestionStartedAt(Date.now());
             setSubmissionError("");
             setTimeAdjustError("");
+
+            if ("speechSynthesis" in window) {
+                window.speechSynthesis.cancel();
+                setIsSpeaking(false);
+            }
         }
     }, [currentIndex, loading, problems.length, showCompleteScreen]);
 
+    useEffect(() => {
+        return () => {
+            if ("speechSynthesis" in window) {
+                window.speechSynthesis.cancel();
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (nextSplashTimerRef.current) {
+                clearTimeout(nextSplashTimerRef.current);
+            }
+        };
+    }, []);
+
     const handleExit = () => {
-        if (isBookmarkMode || isRandomMode || isUnsupportedMode) {
-            navigate("/");
-            return;
-        }
-
-        if (parentFolderId) {
-            navigate(`/folders/${parentFolderId}`);
-            return;
-        }
-
         navigate("/");
     };
 
     const getExitButtonText = () => {
-        if (isBookmarkMode || isRandomMode || isUnsupportedMode) {
-            return "홈으로";
-        }
-
-        if (parentFolderId) {
-            return "폴더 나가기";
-        }
-
         return "홈으로";
     };
 
@@ -476,6 +661,38 @@ export default function QuizPlayPage() {
 
         setCurrentIndex(next);
         setShowAnswer(false);
+    };
+
+    const getRandomSplashMessage = () => {
+        const messages = [
+            "1년 뒤의 나는 환하게 웃는다.",
+            "나는 멈추지 않고, 결국 도착한다.",
+            "나는 하기 싫을 때 1시간 더한다.",
+            "나는 어려운 공부를 좋아한다. 쉬운공부는 재미없다.",
+            "나는 끝까지 쌓아 결국 도달한다.",
+            "나는 나를 믿는다.",
+            "나는 내 가능성을 끝까지 끌어올린다.",
+            "나는 조급함으로 루틴을 망치지 않고, 매일 축적한다",
+            "나는 불안하면 지금 할 것 하나만 생각한다.",
+            "나는 따듯하게, 매일 정진을 지속한다.",
+            "나는 압도적인 기본기와 문제해결력을 가졌다.",
+        ];
+
+        return messages[Math.floor(Math.random() * messages.length)];
+    };
+
+    const goNextWithSplash = () => {
+        if (nextSplashTimerRef.current) {
+            clearTimeout(nextSplashTimerRef.current);
+        }
+
+        setSplashMessage(getRandomSplashMessage());
+        setNextSplashOpen(true);
+
+        nextSplashTimerRef.current = setTimeout(() => {
+            setNextSplashOpen(false);
+            goNext();
+        }, NEXT_SPLASH_DURATION_MS);
     };
 
     const goPrev = () => {
@@ -522,7 +739,7 @@ export default function QuizPlayPage() {
         }
 
         if (submittedProblemIds.has(problem.problemId)) {
-            goNext();
+            goNextWithSplash();
             return true;
         }
 
@@ -558,7 +775,7 @@ export default function QuizPlayPage() {
                 })
             );
 
-            goNext();
+            goNextWithSplash();
             return true;
         } catch (err) {
             console.error("문제 제출 결과 저장 실패:", err);
@@ -594,6 +811,13 @@ export default function QuizPlayPage() {
         setTimeAdjustError("");
     };
 
+    const toggleAnswerByPageClick = () => {
+        if (submitting) return;
+        if (timeAdjustModal.open) return;
+
+        setShowAnswer((prev) => !prev);
+    };
+
     const handleNextClick = async () => {
         if (submitting) return;
 
@@ -612,6 +836,47 @@ export default function QuizPlayPage() {
         }
 
         await submitCurrentProblemAndGoNext(elapsedSeconds);
+    };
+
+    const handleSpeakAnswer = () => {
+        if (!("speechSynthesis" in window)) {
+            setSubmissionError("현재 브라우저에서는 음성 읽기를 지원하지 않습니다.");
+            return;
+        }
+
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+            return;
+        }
+
+        const speechText = buildAnswerSpeechText(problem);
+
+        if (!speechText) {
+            setSubmissionError("읽을 정답 또는 해설이 없습니다.");
+            return;
+        }
+
+        setShowAnswer(true);
+
+        const utterance = new SpeechSynthesisUtterance(speechText);
+
+        utterance.lang = "ko-KR";
+        utterance.rate = 0.95;
+        utterance.pitch = 0.9; //음성 높낮이
+        utterance.volume = 1;
+
+        utterance.onend = () => {
+            setIsSpeaking(false);
+        };
+
+        utterance.onerror = () => {
+            setIsSpeaking(false);
+        };
+
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+        setIsSpeaking(true);
     };
 
     const handleTimeAdjustSubmit = async () => {
@@ -665,10 +930,6 @@ export default function QuizPlayPage() {
                         예: <code>/quiz/play?mode=folder&amp;folderId=9</code>
                     </p>
                 )}
-
-                <button style={getButtonStyle(false)} onClick={handleExit}>
-                    {getExitButtonText()}
-                </button>
             </div>
         );
     }
@@ -678,9 +939,6 @@ export default function QuizPlayPage() {
             <div style={pageStyle}>
                 <h1 style={{ margin: 0 }}>{titlePath || "문제 풀이"}</h1>
                 <p style={mutedTextStyle}>{getEmptyMessage()}</p>
-                <button style={getButtonStyle(false)} onClick={handleExit}>
-                    {getExitButtonText()}
-                </button>
             </div>
         );
     }
@@ -714,47 +972,54 @@ export default function QuizPlayPage() {
         problem,
         titlePath || "문제 풀이"
     );
+    const { parentPath, currentTitle } = splitTitlePath(currentTitlePath);
 
-    const isPrevDisabled = currentIndex === 0 || submitting;
-    const isNextDisabled = submitting;
-    const isExitDisabled = submitting;
+    const isPrevDisabled = currentIndex === 0 || submitting || nextSplashOpen;
+    const isNextDisabled = submitting || nextSplashOpen;
+    const isExitDisabled = submitting || nextSplashOpen;
 
     return (
-        <div style={pageStyle}>
+        <div
+            style={pageStyle}
+            onClick={toggleAnswerByPageClick}
+        >
             <div
                 style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    alignItems: "baseline",
+                    alignItems: "flex-end",
                     gap: 16,
                 }}
             >
                 <div
                     style={{
                         display: "flex",
-                        alignItems: "center",
-                        gap: 8,
+                        flexDirection: "column",
                         minWidth: 0,
+                        flex: 1,
                     }}
                 >
-                    <h1
+                    {parentPath && (
+                        <p style={titleParentPathStyle}>
+                            {parentPath}
+                        </p>
+                    )}
+
+                    <div
                         style={{
-                            margin: 0,
-                            fontSize: 20,
-                            lineHeight: 1.4,
-                            wordBreak: "keep-all",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            minWidth: 0,
                         }}
                     >
-                        {currentTitlePath} [{problem.questionNo}번]
-                    </h1>
-
-                    <BookmarkToggleButton
-                        isBookmarked={!!problem?.meta?.isBookmarked}
-                        onClick={toggleBookmark}
-                    />
+                        <h1 style={titleMainStyle}>
+                            {currentTitle} [{problem.questionNo}번]
+                        </h1>
+                    </div>
                 </div>
 
-                <div style={mutedTextStyle}>
+                <div style={progressCountStyle}>
                     {currentIndex + 1} / {problems.length}
                 </div>
             </div>
@@ -767,13 +1032,14 @@ export default function QuizPlayPage() {
                         display: "flex",
                         alignItems: "flex-start",
                         gap: 6,
-                        fontSize: 18,
-                        fontWeight: 600,
                     }}
                 >
                     <span style={{ flexShrink: 0, lineHeight: 1.7 }}>💁‍♂</span>
 
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                        className="quiz-markdown"
+                        style={{ flex: 1, minWidth: 0, ...questionTextStyle }}
+                    >
                         <MarkdownContent value={problem.questionText} />
                     </div>
                 </div>
@@ -798,34 +1064,58 @@ export default function QuizPlayPage() {
             )}
 
             {showAnswer && (
-                <div style={answerCardStyle}>
-                    <div style={{ marginBottom: 20 }}>
-                        <div style={{ marginBottom: 6, fontWeight: 600 }}>해설</div>
-                        <MarkdownContent value={problem.explanationText} />
+                <div>
+                    <div style={answerCardStyle}>
+                        <div style={{ marginBottom: 20 }}>
+                            <div style={{ marginBottom: 6, fontWeight: 600 }}>해설</div>
+
+                            <div style={explanationTextStyle}>
+                                <MarkdownContent value={problem.explanationText} />
+                            </div>
+                        </div>
+
+                        <div>
+                            <div style={{ marginBottom: 6, fontWeight: 600 }}>정답</div>
+
+                            <div style={answerTextStyle}>
+                                <MarkdownContent value={problem.answerText} />
+                            </div>
+                        </div>
                     </div>
 
-                    <div>
-                        <div style={{ marginBottom: 6, fontWeight: 600 }}>정답</div>
-                        <MarkdownContent value={problem.answerText} />
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            marginTop: -8,
+                            marginBottom: 16,
+                        }}
+                    >
+                        <button
+                            style={getButtonStyle(false)}
+                            onClick={handleSpeakAnswer}
+                        >
+                            {isSpeaking ? "읽기 중지" : "정답 읽기"}
+                        </button>
                     </div>
                 </div>
             )}
 
-            <div
-                style={{
-                    display: "flex",
-                    gap: 8,
-                    marginBottom: 16,
-                    flexWrap: "wrap",
-                }}
-            >
-                <button
-                    style={getButtonStyle(false)}
-                    onClick={() => setShowAnswer((v) => !v)}
+            {submissionError && (
+                <p
+                    style={{
+                        color: "var(--color-danger, #fca5a5)",
+                        marginTop: 0,
+                    }}
                 >
-                    {showAnswer ? "정답/해설 숨기기" : "정답/해설 보기"}
-                </button>
-
+                    {submissionError}
+                </p>
+            )}
+            <div
+                onClick={(e) => e.stopPropagation()}
+                style={bottomLeftControlsStyle}
+            >
                 <button
                     style={getButtonStyle(isPrevDisabled)}
                     onClick={goPrev}
@@ -842,28 +1132,27 @@ export default function QuizPlayPage() {
                     {submitting ? "제출 중..." : "다음 문제"}
                 </button>
 
-                <button
-                    style={getButtonStyle(isExitDisabled)}
-                    onClick={handleExit}
-                    disabled={isExitDisabled}
-                >
-                    {getExitButtonText()}
-                </button>
+                {/*<button*/}
+                {/*    style={getButtonStyle(false)}*/}
+                {/*    onClick={handleSpeakAnswer}*/}
+                {/*>*/}
+                {/*    {isSpeaking ? "읽기 중지" : "정답 읽기"}*/}
+                {/*</button>*/}
             </div>
 
-            {submissionError && (
-                <p
-                    style={{
-                        color: "var(--color-danger, #fca5a5)",
-                        marginTop: 0,
-                    }}
-                >
-                    {submissionError}
-                </p>
-            )}
+            <div
+                onClick={(e) => e.stopPropagation()}
+                style={bottomBookmarkStyle}
+            >
+                <BookmarkToggleButton
+                    isBookmarked={!!problem?.meta?.isBookmarked}
+                    onClick={toggleBookmark}
+                />
+            </div>
 
             {timeAdjustModal.open && (
                 <div
+                    onClick={(e) => e.stopPropagation()}
                     style={{
                         position: "fixed",
                         inset: 0,
@@ -957,12 +1246,36 @@ export default function QuizPlayPage() {
                 </div>
             )}
 
-            <FabGroup
-                onEdit={goEdit}
-                onHome={() => navigate("/")}
-                onToggleMusic={() => setIsMusicOn((v) => !v)}
-                isMusicOn={isMusicOn}
-            />
+            <div onClick={(e) => e.stopPropagation()}>
+                <FabGroup
+                    onEdit={goEdit}
+                    onHome={() => navigate("/")}
+                    onToggleMusic={() => setIsMusicOn((v) => !v)}
+                    isMusicOn={isMusicOn}
+                />
+            </div>
+
+            {nextSplashOpen && (
+                <div
+                    style={nextSplashOverlayStyle}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div style={nextSplashCardStyle}>
+                        <Lottie
+                            animationData={successLottie}
+                            loop={false}
+                            style={{
+                                width: 140,
+                                height: 140,
+                            }}
+                        />
+
+                        <div style={nextSplashTextStyle}>
+                            {splashMessage}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -971,12 +1284,15 @@ function BookmarkToggleButton({ isBookmarked, onClick }) {
     return (
         <button
             type="button"
-            onClick={onClick}
+            onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+            }}
             aria-label={isBookmarked ? "북마크 해제" : "북마크 추가"}
             title={isBookmarked ? "북마크 해제" : "북마크 추가"}
             style={{
-                width: 32,
-                height: 32,
+                width: 48,
+                height: 48,
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -991,8 +1307,8 @@ function BookmarkToggleButton({ isBookmarked, onClick }) {
             }}
         >
             <svg
-                width="24"
-                height="24"
+                width="36"
+                height="36"
                 viewBox="0 0 24 24"
                 aria-hidden="true"
             >
