@@ -1,4 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Lottie from "lottie-react";
+import successLottie from "../../assets/lottie/success1.json";
+// import successLottie from "../../assets/lottie/success2.json";
+
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { getFolderPractice } from "../../shared/api/folderApi";
 import {
@@ -134,6 +138,39 @@ const bottomBookmarkStyle = {
     alignItems: "center",
     justifyContent: "center",
     zIndex: 901,
+};
+
+const NEXT_SPLASH_DURATION_MS = 3200;
+
+const nextSplashOverlayStyle = {
+    position: "fixed",
+    inset: 0,
+    zIndex: 2000,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    backdropFilter: "blur(2px)",
+    pointerEvents: "auto",
+};
+
+const nextSplashCardStyle = {
+    width: 300,
+    minHeight: 200,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 24,
+    border: "1px solid var(--color-border, #374151)",
+    boxShadow: "0 12px 32px rgba(0, 0, 0, 0.35)",
+};
+
+const nextSplashTextStyle = {
+    marginTop: 8,
+    fontSize: 13,
+    fontWeight: 700,
+    color: "var(--color-text, #f9fafb)",
 };
 
 function getButtonStyle(disabled = false) {
@@ -402,6 +439,11 @@ export default function QuizPlayPage() {
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
+
+    const [nextSplashOpen, setNextSplashOpen] = useState(false);
+    const [splashMessage, setSplashMessage] = useState("좋아요!");
+    const nextSplashTimerRef = useRef(null);
+
     const [isSpeaking, setIsSpeaking] = useState(false);
 
     const [questionStartedAt, setQuestionStartedAt] = useState(Date.now());
@@ -572,6 +614,14 @@ export default function QuizPlayPage() {
         };
     }, []);
 
+    useEffect(() => {
+        return () => {
+            if (nextSplashTimerRef.current) {
+                clearTimeout(nextSplashTimerRef.current);
+            }
+        };
+    }, []);
+
     const handleExit = () => {
         navigate("/");
     };
@@ -611,6 +661,38 @@ export default function QuizPlayPage() {
 
         setCurrentIndex(next);
         setShowAnswer(false);
+    };
+
+    const getRandomSplashMessage = () => {
+        const messages = [
+            "1년 뒤의 나는 환하게 웃는다.",
+            "나는 멈추지 않고, 결국 도착한다.",
+            "나는 하기 싫을 때 1시간 더한다.",
+            "나는 어려운 공부를 좋아한다. 쉬운공부는 재미없다.",
+            "나는 끝까지 쌓아 결국 도달한다.",
+            "나는 나를 믿는다.",
+            "나는 내 가능성을 끝까지 끌어올린다.",
+            "나는 조급함으로 루틴을 망치지 않고, 매일 축적한다",
+            "나는 불안하면 지금 할 것 하나만 생각한다.",
+            "나는 따듯하게, 매일 정진을 지속한다.",
+            "나는 압도적인 기본기와 문제해결력을 가졌다.",
+        ];
+
+        return messages[Math.floor(Math.random() * messages.length)];
+    };
+
+    const goNextWithSplash = () => {
+        if (nextSplashTimerRef.current) {
+            clearTimeout(nextSplashTimerRef.current);
+        }
+
+        setSplashMessage(getRandomSplashMessage());
+        setNextSplashOpen(true);
+
+        nextSplashTimerRef.current = setTimeout(() => {
+            setNextSplashOpen(false);
+            goNext();
+        }, NEXT_SPLASH_DURATION_MS);
     };
 
     const goPrev = () => {
@@ -657,7 +739,7 @@ export default function QuizPlayPage() {
         }
 
         if (submittedProblemIds.has(problem.problemId)) {
-            goNext();
+            goNextWithSplash();
             return true;
         }
 
@@ -693,7 +775,7 @@ export default function QuizPlayPage() {
                 })
             );
 
-            goNext();
+            goNextWithSplash();
             return true;
         } catch (err) {
             console.error("문제 제출 결과 저장 실패:", err);
@@ -892,9 +974,9 @@ export default function QuizPlayPage() {
     );
     const { parentPath, currentTitle } = splitTitlePath(currentTitlePath);
 
-    const isPrevDisabled = currentIndex === 0 || submitting;
-    const isNextDisabled = submitting;
-    const isExitDisabled = submitting;
+    const isPrevDisabled = currentIndex === 0 || submitting || nextSplashOpen;
+    const isNextDisabled = submitting || nextSplashOpen;
+    const isExitDisabled = submitting || nextSplashOpen;
 
     return (
         <div
@@ -1172,6 +1254,28 @@ export default function QuizPlayPage() {
                     isMusicOn={isMusicOn}
                 />
             </div>
+
+            {nextSplashOpen && (
+                <div
+                    style={nextSplashOverlayStyle}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div style={nextSplashCardStyle}>
+                        <Lottie
+                            animationData={successLottie}
+                            loop={false}
+                            style={{
+                                width: 140,
+                                height: 140,
+                            }}
+                        />
+
+                        <div style={nextSplashTextStyle}>
+                            {splashMessage}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
