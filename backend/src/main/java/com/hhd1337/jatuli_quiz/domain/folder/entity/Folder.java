@@ -40,27 +40,37 @@ public class Folder {
     @JoinColumn(name = "parent_folder_id")
     private Folder parentFolder;
 
+    @Column(name = "sort_order")
+    private Integer sortOrder;
+
     public Folder(
             String fullPath,
             Integer depth,
             String name,
             Integer problemCount,
-            Folder parentFolder
+            Folder parentFolder,
+            Integer sortOrder
     ) {
         this.fullPath = fullPath;
         this.depth = depth;
         this.name = name;
         this.problemCount = problemCount;
         this.parentFolder = parentFolder;
+        this.sortOrder = sortOrder;
     }
 
-    public static Folder createChildFolder(String name, Folder parentFolder) {
+    public static Folder createChildFolder(
+            String name,
+            Folder parentFolder,
+            Integer sortOrder
+    ) {
         return new Folder(
                 buildFullPath(parentFolder, name),
                 parentFolder.getDepth() + 1,
                 name,
                 0,
-                parentFolder
+                parentFolder,
+                sortOrder
         );
     }
 
@@ -79,5 +89,22 @@ public class Folder {
             this.problemCount = 0;
         }
         this.problemCount += count;
+    }
+
+    public void rename(String name) {
+        this.name = name;
+        this.fullPath = buildFullPath(this.parentFolder, name);
+    }
+
+    public void refreshFullPath() {
+        this.fullPath = buildFullPath(this.parentFolder, this.name);
+    }
+
+    public void changeSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
+    }
+
+    public boolean isRoot() {
+        return this.parentFolder == null;
     }
 }

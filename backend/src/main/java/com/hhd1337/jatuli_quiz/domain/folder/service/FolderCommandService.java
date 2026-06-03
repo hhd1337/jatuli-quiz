@@ -8,4 +8,16 @@ public interface FolderCommandService {
     FolderResponse.CreateFolderResponse createFolder(
             FolderRequest.CreateFolderRequest request
     );
+
+    FolderResponse.RenameFolderResponse renameFolder(
+            Long folderId,
+            FolderRequest.RenameFolderRequest request
+    );
+
+    FolderResponse.DeleteFolderResponse deleteFolder(Long folderId);
+
+    FolderResponse.ReorderFoldersResponse reorderChildFolders(
+            Long parentFolderId,
+            FolderRequest.ReorderFoldersRequest request
+    );
 }

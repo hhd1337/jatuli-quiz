@@ -75,7 +75,7 @@ public class HomeQueryServiceImpl implements HomeQueryService {
                 getBookmarkCycleProgress(learningProgress);
 
         List<Folder> rootFolders =
-                folderRepository.findAllByParentFolder_FolderIdOrderByFolderIdAsc(ROOT_FOLDER_ID);
+                folderRepository.findAllByParentFolder_FolderIdOrderBySortOrderAscFolderIdAsc(ROOT_FOLDER_ID);
 
         List<HomeResponse.RootFolderItem> rootFolderItems = rootFolders.stream()
                 .map(this::buildFolderTreeItem)
@@ -135,7 +135,7 @@ public class HomeQueryServiceImpl implements HomeQueryService {
         int ownSolvedProblemCount = problemRepository.countByFolderAndSolvedCountGreaterThan(folder, 0);
 
         List<Folder> childFolders =
-                folderRepository.findAllByParentFolder_FolderIdOrderByFolderIdAsc(folder.getFolderId());
+                folderRepository.findAllByParentFolder_FolderIdOrderBySortOrderAscFolderIdAsc(folder.getFolderId());
 
         List<FolderTreeBuildResult> childResults = childFolders.stream()
                 .map(this::buildFolderTreeItem)
