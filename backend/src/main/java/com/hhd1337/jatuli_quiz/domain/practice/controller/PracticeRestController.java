@@ -1,4 +1,4 @@
-package com.hhd1337.jatuli_quiz.domain.practice;
+package com.hhd1337.jatuli_quiz.domain.practice.controller;
 
 import com.hhd1337.jatuli_quiz.common.response.ApiResponse;
 import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeResponse;
