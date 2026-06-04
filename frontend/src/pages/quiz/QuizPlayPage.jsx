@@ -7,6 +7,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { getFolderPractice } from "../../shared/api/folderApi";
 import {
     getBookmarkedPractice,
+    getFolderPracticeCursor,
     submitProblemSubmission,
     toggleProblemBookmark,
 } from "../../shared/api/quizApi";
@@ -174,7 +175,9 @@ const nextSplashTextStyle = {
     color: "var(--color-text, #f9fafb)",
 };
 
-function getButtonStyle(disabled = false) {
+function getButtonStyle(disabled = false, size = "normal") {
+    const isSmall = size === "small";
+
     return {
         border: "1px solid var(--color-border, #374151)",
         background: disabled
@@ -183,12 +186,15 @@ function getButtonStyle(disabled = false) {
         color: disabled
             ? "var(--color-button-disabled-text, #6b7280)"
             : "var(--color-button-text, #f9fafb)",
-        padding: "6px 10px",
+        padding: isSmall ? "6px 8px" : "6px 10px",
         borderRadius: 6,
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.65 : 1,
-        width: 80,
+        minWidth: isSmall ? 45 : 80,
+        width: "auto",
         height: 35,
+        fontSize: isSmall ? 13 : 14,
+        whiteSpace: "nowrap",
     };
 }
 
@@ -465,6 +471,51 @@ export default function QuizPlayPage() {
 
     const problems = localProblems;
 
+    const resolveFolderStartIndex = async (targetFolderId, fetchedProblems) => {
+        if (!targetFolderId || fetchedProblems.length === 0) {
+            return 0;
+        }
+
+        try {
+            const cursor = await getFolderPracticeCursor(targetFolderId);
+
+            if (!cursor.hasCursor) {
+                return 0;
+            }
+
+            const safeCursorIndex = Math.min(
+                Math.max(Number(cursor.nextProblemIndex) || 0, 0),
+                fetchedProblems.length - 1
+            );
+
+            const shouldContinue = window.confirm(
+                `${cursor.nextProblemNumber}번 문제부터 이어서 풀까요?\n\n확인: 이어서 풀기\n취소: 처음부터 풀기`
+            );
+
+            return shouldContinue ? safeCursorIndex : 0;
+        } catch (cursorError) {
+            console.warn("폴더별 커서 조회 실패:", cursorError);
+            return 0;
+        }
+    };
+
+    const getSubmissionContext = () => {
+        if (isBookmarkMode) {
+            return {
+                practiceMode: "BOOKMARKED",
+            };
+        }
+
+        if (isFolderPracticeMode) {
+            return {
+                practiceMode: "FOLDER",
+                folderId: Number(folderId),
+            };
+        }
+
+        return {};
+    };
+
     useEffect(() => {
         let ignore = false;
 
@@ -535,8 +586,12 @@ export default function QuizPlayPage() {
                     if (ignore) return;
 
                     const fetchedProblems = data.problems ?? [];
+                    const startIndex = await resolveFolderStartIndex(folderId, fetchedProblems);
+
+                    if (ignore) return;
 
                     setLocalProblems(fetchedProblems);
+                    setCurrentIndex(startIndex);
                     setTitlePath(
                         getPracticeTitlePath(data, initialTitlePath || "문제 풀이")
                     );
@@ -563,7 +618,33 @@ export default function QuizPlayPage() {
 
                 if (ignore) return;
 
-                setLocalProblems(data.problems ?? []);
+                const fetchedProblems = data.problems ?? [];
+
+                let startIndex = 0;
+
+                try {
+                    const cursor = await getFolderPracticeCursor(folderId);
+
+                    if (!ignore && cursor.hasCursor && fetchedProblems.length > 0) {
+                        const safeCursorIndex = Math.min(
+                            Math.max(Number(cursor.nextProblemIndex) || 0, 0),
+                            fetchedProblems.length - 1
+                        );
+
+                        const shouldContinue = window.confirm(
+                            `${cursor.nextProblemNumber}번 문제부터 이어서 풀까요?\n\n확인: 이어서 풀기\n취소: 처음부터 풀기`
+                        );
+
+                        if (shouldContinue) {
+                            startIndex = safeCursorIndex;
+                        }
+                    }
+                } catch (cursorError) {
+                    console.warn("폴더별 커서 조회 실패:", cursorError);
+                }
+
+                setLocalProblems(fetchedProblems);
+                setCurrentIndex(startIndex);
                 setTitlePath(
                     getPracticeTitlePath(data, initialTitlePath || "문제 풀이")
                 );
@@ -797,6 +878,7 @@ export default function QuizPlayPage() {
                 problemId: problem.problemId,
                 isCorrect: true,
                 elapsedSeconds,
+                ...getSubmissionContext(),
             });
 
             setSubmittedProblemIds((prev) => {
@@ -864,13 +946,19 @@ export default function QuizPlayPage() {
         setShowAnswer((prev) => !prev);
     };
 
-    const handleNextClick = async () => {
-        if (submitting) return;
+    const handleSkipNextClick = () => {
+        if (submitting || nextSplashOpen) return;
+
+        goNext();
+    };
+
+    const handleSubmitAndNextClick = async () => {
+        if (submitting || nextSplashOpen) return;
 
         const problem = problems[currentIndex];
 
         if (submittedProblemIds.has(problem?.problemId)) {
-            goNext();
+            goNextWithSplash();
             return;
         }
 
@@ -1021,8 +1109,8 @@ export default function QuizPlayPage() {
     const { parentPath, currentTitle } = splitTitlePath(currentTitlePath);
 
     const isPrevDisabled = currentIndex === 0 || submitting || nextSplashOpen;
-    const isNextDisabled = submitting || nextSplashOpen;
-    const isExitDisabled = submitting || nextSplashOpen;
+    const isSkipNextDisabled = submitting || nextSplashOpen;
+    const isSubmitNextDisabled = submitting || nextSplashOpen;
 
     return (
         <div
@@ -1174,27 +1262,28 @@ export default function QuizPlayPage() {
                 style={bottomLeftControlsStyle}
             >
                 <button
-                    style={getButtonStyle(isPrevDisabled)}
+                    style={getButtonStyle(isPrevDisabled, "small")}
                     onClick={goPrev}
                     disabled={isPrevDisabled}
                 >
-                    이전 문제
+                    &lt; 이전
                 </button>
 
                 <button
-                    style={getButtonStyle(isNextDisabled)}
-                    onClick={handleNextClick}
-                    disabled={isNextDisabled}
+                    style={getButtonStyle(isSkipNextDisabled, "small")}
+                    onClick={handleSkipNextClick}
+                    disabled={isSkipNextDisabled}
                 >
-                    {submitting ? "제출 중..." : "다음 문제"}
+                    다음 &gt;
                 </button>
 
-                {/*<button*/}
-                {/*    style={getButtonStyle(false)}*/}
-                {/*    onClick={handleSpeakAnswer}*/}
-                {/*>*/}
-                {/*    {isSpeaking ? "읽기 중지" : "정답 읽기"}*/}
-                {/*</button>*/}
+                <button
+                    style={getButtonStyle(isSubmitNextDisabled)}
+                    onClick={handleSubmitAndNextClick}
+                    disabled={isSubmitNextDisabled}
+                >
+                    {submitting ? "제출 중..." : "제출 후 다음"}
+                </button>
             </div>
 
             <div

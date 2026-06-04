@@ -18,16 +18,54 @@ export async function getBookmarkedPractice(problemCount = 10) {
     );
 }
 
+export async function getFolderPracticeCursor(folderId) {
+    if (!folderId) {
+        throw new Error("folderId is required");
+    }
+
+    const response = await apiClient.get(
+        `/api/v1/folders/${folderId}/practice-cursor`
+    );
+
+    const result = response.data.result ?? {};
+
+    return {
+        hasCursor: !!result.hasCursor,
+        nextProblemId: result.nextProblemId ?? null,
+        nextProblemIndex: Number.isFinite(Number(result.nextProblemIndex))
+            ? Number(result.nextProblemIndex)
+            : 0,
+        nextProblemNumber: Number.isFinite(Number(result.nextProblemNumber))
+            ? Number(result.nextProblemNumber)
+            : 1,
+        totalProblemCount: Number.isFinite(Number(result.totalProblemCount))
+            ? Number(result.totalProblemCount)
+            : 0,
+    };
+}
+
 export async function submitProblemSubmission({
                                                   problemId,
                                                   isCorrect,
                                                   elapsedSeconds,
+                                                  practiceMode,
+                                                  folderId,
                                               }) {
-    const response = await apiClient.post("/problem-submissions", {
+    const payload = {
         problemId,
         isCorrect,
         elapsedSeconds,
-    });
+    };
+
+    if (practiceMode) {
+        payload.practiceMode = practiceMode;
+    }
+
+    if (folderId) {
+        payload.folderId = folderId;
+    }
+
+    const response = await apiClient.post("/api/v1/problem-submissions", payload);
 
     return response.data.result;
 }
