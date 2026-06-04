@@ -69,7 +69,10 @@ public class FolderPracticeCursorService {
         int submittedProblemIndex = findProblemIndex(problems, submittedProblemId);
 
         if (submittedProblemIndex == -1) {
-            return;
+            throw new IllegalArgumentException(
+                    "제출한 문제가 해당 폴더에 속하지 않습니다. folderId="
+                            + folderId + ", problemId=" + submittedProblemId
+            );
         }
 
         int nextProblemIndex = submittedProblemIndex + 1;
@@ -82,7 +85,9 @@ public class FolderPracticeCursorService {
 
         FolderPracticeCursor cursor = folderPracticeCursorRepository
                 .findByFolder_FolderId(folderId)
-                .orElseGet(() -> FolderPracticeCursor.create(folder, nextProblemId));
+                .orElseGet(() -> folderPracticeCursorRepository.save(
+                        FolderPracticeCursor.create(folder, nextProblemId)
+                ));
 
         cursor.updateCursor(submittedProblemId, nextProblemId);
     }
