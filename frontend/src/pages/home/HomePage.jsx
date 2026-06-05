@@ -7,7 +7,10 @@ import {
     deleteFolder,
     reorderChildFolders,
 } from "../../shared/api/folderApi";
-import { importProblemsText } from "../../shared/api/quizApi";
+import {
+    importProblemsText,
+    getFolderProblemsForCopy,
+} from "../../shared/api/quizApi";
 
 const pageStyle = {
     width: "100%",
@@ -419,6 +422,7 @@ function FolderTreeItem({
                             onCancelCreateFolder,
 
                             onStartImportProblems,
+                            onCopyFolderProblems,
 
                             openedMenuFolderId,
                             onToggleFolderMenu,
@@ -593,6 +597,20 @@ function FolderTreeItem({
                                         boxShadow: "0 12px 30px rgba(0, 0, 0, 0.35)",
                                     }}
                                 >
+                                    <button
+                                        type="button"
+                                        onClick={() => onCopyFolderProblems(folder, titlePath)}
+                                        disabled={submitting}
+                                        style={{
+                                            ...folderActionButtonStyle,
+                                            width: "100%",
+                                            borderRadius: 8,
+                                            justifyContent: "center",
+                                            color: "var(--color-primary)",
+                                        }}
+                                    >
+                                        문제 전체 복사
+                                    </button>
                                     {isLeaf && (
                                         <button
                                             type="button"
@@ -768,6 +786,7 @@ function FolderTreeItem({
                             onCancelCreateFolder={onCancelCreateFolder}
 
                             onStartImportProblems={onStartImportProblems}
+                            onCopyFolderProblems={onCopyFolderProblems}
 
                             openedMenuFolderId={openedMenuFolderId}
                             onToggleFolderMenu={onToggleFolderMenu}
@@ -845,6 +864,90 @@ function moveItem(array, fromIndex, toIndex) {
     const [removed] = copied.splice(fromIndex, 1);
     copied.splice(toIndex, 0, removed);
     return copied;
+}
+
+const GPT_COPY_PROMPT = `이 대화창에서는 아래 문제들에 대해 물어볼 것입니다.
+당신은 선생님이라고 생각하고, 제가 질문하는 내용에 대해 자세하고 친절하게 설명해주세요.
+단순히 정답만 말하지 말고, 왜 그런 답이 되는지 개념부터 차근차근 길게 설명해주세요.
+우선 아래 문제를 먼저 학습만 해주세요.`;
+
+function normalizeProblemText(value) {
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    return String(value).trim();
+}
+
+function buildProblemCopyText({ titlePath, problems }) {
+    const problemBlocks = problems.map((problem, index) => {
+        const question = normalizeProblemText(
+            problem.questionText ??
+            problem.question ??
+            problem.content ??
+            problem.problemText
+        );
+
+        const answer = normalizeProblemText(
+            problem.answerText ??
+            problem.answer ??
+            problem.correctAnswer
+        );
+
+        const explanation = normalizeProblemText(
+            problem.explanationText ??
+            problem.explanation ??
+            problem.commentary ??
+            problem.solution
+        );
+
+        const problemNumber = problem.problemNum ?? index + 1;
+
+        return `## 문제 ${problemNumber}
+
+문제:
+${question || "(문제 내용 없음)"}
+
+정답:
+${answer || "(정답 없음)"}
+
+해설:
+${explanation || "(해설 없음)"}`;
+    });
+
+    return `${GPT_COPY_PROMPT}
+
+# 문제 목록
+
+폴더:
+${titlePath}
+
+${problemBlocks.join("\n\n")}`;
+}
+
+async function copyTextToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-9999px";
+    textarea.style.left = "-9999px";
+
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textarea);
+
+    if (!copied) {
+        throw new Error("클립보드 복사에 실패했습니다.");
+    }
 }
 
 export default function HomePage() {
@@ -1071,6 +1174,35 @@ export default function HomePage() {
 
         setProblemImportText("");
         setOpenedMenuFolderId(null);
+    }
+
+    async function handleCopyFolderProblems(folder, titlePath) {
+        try {
+            setSubmitting(true);
+            setOpenedMenuFolderId(null);
+
+            const result = await getFolderProblemsForCopy(folder.folderId);
+            const problems = Array.isArray(result?.problems) ? result.problems : [];
+
+            if (problems.length === 0) {
+                alert("복사할 문제가 없습니다.");
+                return;
+            }
+
+            const copyText = buildProblemCopyText({
+                titlePath: result?.folderPath || titlePath,
+                problems,
+            });
+
+            await copyTextToClipboard(copyText);
+
+            alert(`${problems.length}개의 문제가 클립보드에 복사되었습니다.`);
+        } catch (err) {
+            console.error("문제 전체 복사 실패:", err);
+            alert("문제 전체 복사에 실패했습니다.");
+        } finally {
+            setSubmitting(false);
+        }
     }
 
     function handleCancelImportProblems() {
@@ -1568,6 +1700,7 @@ export default function HomePage() {
                                     onCancelCreateFolder={handleCancelCreateFolder}
 
                                     onStartImportProblems={handleStartImportProblems}
+                                    onCopyFolderProblems={handleCopyFolderProblems}
 
                                     openedMenuFolderId={openedMenuFolderId}
                                     onToggleFolderMenu={handleToggleFolderMenu}
