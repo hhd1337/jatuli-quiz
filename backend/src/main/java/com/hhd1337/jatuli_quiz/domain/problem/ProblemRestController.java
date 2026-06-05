@@ -4,12 +4,15 @@ import com.hhd1337.jatuli_quiz.common.response.ApiResponse;
 import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeRequest;
 import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemBookmarkResponse;
+import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemCopyResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportRequest;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.service.ProblemCommandService;
+import com.hhd1337.jatuli_quiz.domain.problem.service.ProblemQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProblemRestController {
 
     private final ProblemCommandService problemCommandService;
+    private final ProblemQueryService problemQueryService;
 
     @Operation(
             summary = "문제 북마크 토글",
@@ -99,5 +103,24 @@ public class ProblemRestController {
             @Valid @RequestBody PracticeRequest.GetBookmarkedPracticeProblemsRequest request
     ) {
         return ApiResponse.onSuccess(problemCommandService.getBookmarkedPracticeProblems(request));
+    }
+
+    @Operation(
+            summary = "폴더 문제 전체 복사용 조회",
+            description = """
+                    특정 폴더에 포함된 문제 목록을 복사용으로 조회합니다.
+                    
+                    사용자가 홈 화면 문제집 관리 모드에서 '문제 전체 복사'를 누를 때 사용합니다.
+                    선택한 폴더와 그 하위 폴더에 포함된 문제들을 함께 조회합니다.
+                    
+                    이 API는 클립보드 복사용 데이터를 제공하는 read-only 조회 API입니다.
+                    문제 풀이 기록, solvedCount, 북마크 순회 상태, 폴더별 진행 포인터는 변경하지 않습니다.
+                    """
+    )
+    @GetMapping("/folders/{folderId}/copy")
+    public ApiResponse<ProblemCopyResponse.CopyProblemsResponse> getProblemsForCopy(
+            @PathVariable Long folderId
+    ) {
+        return ApiResponse.onSuccess(problemQueryService.getProblemsForCopy(folderId));
     }
 }
