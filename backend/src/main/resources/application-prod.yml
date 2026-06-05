@@ -12,3 +12,11 @@ spring:
     properties:
       hibernate:
         format_sql: false
+
+app:
+  cors:
+    allowed-origins: >
+      https://jatuli.online,
+      https://www.jatuli.online,
+      https://jatuli-quiz-frontend.vercel.app,
+      https://api.jatuli.online
