@@ -935,14 +935,19 @@ async function copyTextToClipboard(text) {
     textarea.value = text;
     textarea.setAttribute("readonly", "");
     textarea.style.position = "fixed";
-    textarea.style.top = "-9999px";
-    textarea.style.left = "-9999px";
+    textarea.style.top = "0";
+    textarea.style.left = "0";
+    textarea.style.opacity = "0";
+    textarea.style.pointerEvents = "none";
 
     document.body.appendChild(textarea);
+
     textarea.focus();
     textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
 
     const copied = document.execCommand("copy");
+
     document.body.removeChild(textarea);
 
     if (!copied) {
@@ -979,6 +984,9 @@ export default function HomePage() {
 
     const [openedMenuFolderId, setOpenedMenuFolderId] = useState(null);
     const [submitting, setSubmitting] = useState(false);
+
+    const [copyDialog, setCopyDialog] = useState(null);
+    const copyTextareaRef = useRef(null);
 
     function toggleFolder(folderId) {
         setCollapsedFolderIds((prev) => {
@@ -1194,15 +1202,61 @@ export default function HomePage() {
                 problems,
             });
 
-            await copyTextToClipboard(copyText);
+            const isMobileApple =
+                /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-            alert(`${problems.length}개의 문제가 클립보드에 복사되었습니다.`);
+            if (isMobileApple) {
+                setCopyDialog({
+                    titlePath: result?.folderPath || titlePath,
+                    problemCount: problems.length,
+                    text: copyText,
+                });
+                return;
+            }
+
+            try {
+                await copyTextToClipboard(copyText);
+                alert(`${problems.length}개의 문제가 클립보드에 복사되었습니다.`);
+            } catch (copyError) {
+                console.error("클립보드 복사 실패:", copyError);
+
+                setCopyDialog({
+                    titlePath: result?.folderPath || titlePath,
+                    problemCount: problems.length,
+                    text: copyText,
+                });
+            }
         } catch (err) {
             console.error("문제 전체 복사 실패:", err);
             alert("문제 전체 복사에 실패했습니다.");
         } finally {
             setSubmitting(false);
         }
+    }
+
+    async function handleCopyDialogText() {
+        if (!copyDialog?.text) return;
+
+        try {
+            await copyTextToClipboard(copyDialog.text);
+            alert(`${copyDialog.problemCount}개의 문제가 클립보드에 복사되었습니다.`);
+        } catch (err) {
+            console.error("복사 모달에서 클립보드 복사 실패:", err);
+
+            const textarea = copyTextareaRef.current;
+
+            if (textarea) {
+                textarea.focus();
+                textarea.select();
+                textarea.setSelectionRange(0, textarea.value.length);
+            }
+
+            alert("자동 복사가 막혔습니다. 아래 내용을 직접 길게 눌러 복사해주세요.");
+        }
+    }
+
+    function handleCloseCopyDialog() {
+        setCopyDialog(null);
     }
 
     function handleCancelImportProblems() {
@@ -1833,7 +1887,132 @@ export default function HomePage() {
                     </div>
                 </div>
             )}
+            {copyDialog && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(0, 0, 0, 0.65)",
+                        zIndex: 200,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        padding: 16,
+                    }}
+                >
+                    <div
+                        style={{
+                            width: 560,
+                            maxWidth: "100%",
+                            maxHeight: "90vh",
+                            border: "1px solid var(--color-border)",
+                            background: "var(--color-surface)",
+                            color: "var(--color-text)",
+                            borderRadius: 18,
+                            padding: 18,
+                            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)",
+                            overflow: "auto",
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "flex-start",
+                                gap: 12,
+                                marginBottom: 12,
+                            }}
+                        >
+                            <div>
+                                <h3
+                                    style={{
+                                        margin: 0,
+                                        fontSize: 20,
+                                        letterSpacing: "-0.04em",
+                                    }}
+                                >
+                                    문제 전체 복사
+                                </h3>
 
+                                <p
+                                    style={{
+                                        ...mutedTextStyle,
+                                        marginTop: 6,
+                                        marginBottom: 0,
+                                        fontSize: 13,
+                                        lineHeight: 1.5,
+                                    }}
+                                >
+                                    {copyDialog.titlePath} / {copyDialog.problemCount}문제
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleCloseCopyDialog}
+                                style={folderIconButtonStyle}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <p
+                            style={{
+                                ...mutedTextStyle,
+                                marginTop: 0,
+                                marginBottom: 10,
+                                fontSize: 13,
+                                lineHeight: 1.6,
+                            }}
+                        >
+                            모바일 브라우저에서 자동 복사가 막힐 수 있습니다.
+                            아래 버튼을 눌러 복사하거나, 안 되면 내용을 직접 길게 눌러 복사해주세요.
+                        </p>
+
+                        <textarea
+                            ref={copyTextareaRef}
+                            value={copyDialog.text}
+                            readOnly
+                            rows={14}
+                            onFocus={(e) => e.target.select()}
+                            style={{
+                                ...textareaStyle,
+                                fontSize: 13,
+                                minHeight: 260,
+                            }}
+                        />
+
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: 8,
+                                marginTop: 14,
+                            }}
+                        >
+                            <button
+                                type="button"
+                                onClick={handleCopyDialogText}
+                                style={{
+                                    ...getButtonStyle(false),
+                                    flex: 1,
+                                    background: "var(--color-primary)",
+                                    color: "var(--color-bg)",
+                                }}
+                            >
+                                클립보드에 복사
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleCloseCopyDialog}
+                                style={getButtonStyle(false)}
+                            >
+                                닫기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
