@@ -113,4 +113,6 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     int countByIsBookmarkedTrueAndLastPracticedBookmarkedRoundNoGreaterThanEqual(Integer roundNo);
 
     boolean existsByFolder(Folder folder);
+
+    List<Problem> findByFolder_FolderIdOrderByProblemIdAsc(Long folderId);
 }

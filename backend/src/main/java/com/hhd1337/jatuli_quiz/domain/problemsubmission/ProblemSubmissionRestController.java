@@ -9,11 +9,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/problem-submissions")
 @RequiredArgsConstructor
 public class ProblemSubmissionRestController {
 
@@ -29,7 +27,7 @@ public class ProblemSubmissionRestController {
                     오늘 첫 제출인 경우 daysInARow도 함께 갱신합니다.
                     """
     )
-    @PostMapping
+    @PostMapping("/api/v1/problem-submissions")
     public ApiResponse<ProblemSubmissionResponse.CreateProblemSubmissionResponse> submit(
             @Valid @RequestBody ProblemSubmissionRequest.CreateProblemSubmissionRequest request
     ) {

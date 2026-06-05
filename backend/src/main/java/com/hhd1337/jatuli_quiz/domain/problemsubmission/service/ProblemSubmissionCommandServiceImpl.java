@@ -4,6 +4,7 @@ import com.hhd1337.jatuli_quiz.common.exception.GeneralException;
 import com.hhd1337.jatuli_quiz.common.exception.code.status.ErrorStatus;
 import com.hhd1337.jatuli_quiz.domain.dailystat.entity.DailyStat;
 import com.hhd1337.jatuli_quiz.domain.dailystat.repository.DailyStatRepository;
+import com.hhd1337.jatuli_quiz.domain.practice.service.FolderPracticeCursorService;
 import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
 import com.hhd1337.jatuli_quiz.domain.problem.repository.ProblemRepository;
 import com.hhd1337.jatuli_quiz.domain.problemsubmission.converter.ProblemSubmissionConverter;
@@ -32,6 +33,7 @@ public class ProblemSubmissionCommandServiceImpl implements ProblemSubmissionCom
     private final ProblemSubmissionRepository problemSubmissionRepository;
     private final DailyStatRepository dailyStatRepository;
     private final LearningProgressRepository learningProgressRepository;
+    private final FolderPracticeCursorService folderPracticeCursorService;
 
     @Override
     public ProblemSubmissionResponse.CreateProblemSubmissionResponse submit(
@@ -40,16 +42,22 @@ public class ProblemSubmissionCommandServiceImpl implements ProblemSubmissionCom
         Problem problem = problemRepository.findById(request.getProblemId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.PROBLEM_NOT_FOUND));
 
-        LearningProgress learningProgress = getOrCreateSingleUserLearningProgressWithLock();
-        Integer currentRoundNo = learningProgress.getCurrentBookmarkedRoundNo();
-
         int elapsedSeconds = request.getElapsedSeconds() == null ? 0 : request.getElapsedSeconds();
 
-        boolean isBookmarkedSubmission = Boolean.TRUE.equals(problem.getIsBookmarked());
+        boolean isBookmarkedPracticeSubmission =
+                request.isBookmarkedPracticeMode() && Boolean.TRUE.equals(problem.getIsBookmarked());
+
+        LearningProgress learningProgress = null;
+        Integer currentRoundNo = null;
+
+        if (isBookmarkedPracticeSubmission) {
+            learningProgress = getOrCreateSingleUserLearningProgressWithLock();
+            currentRoundNo = learningProgress.getCurrentBookmarkedRoundNo();
+        }
 
         problem.increaseSolvedCount();
 
-        if (isBookmarkedSubmission) {
+        if (isBookmarkedPracticeSubmission) {
             problem.markPracticedInBookmarkedRound(currentRoundNo);
         }
 
@@ -63,12 +71,29 @@ public class ProblemSubmissionCommandServiceImpl implements ProblemSubmissionCom
 
         DailyStat dailyStat = updateDailyStat(elapsedSeconds);
 
-        if (isBookmarkedSubmission) {
+        if (request.isFolderPracticeMode()) {
+            updateFolderPracticeCursor(request);
+        }
+
+        if (isBookmarkedPracticeSubmission) {
             problemRepository.flush();
             completeBookmarkedRoundIfNeeded(learningProgress, currentRoundNo);
         }
 
         return ProblemSubmissionConverter.toCreateProblemSubmissionResponse(problem, dailyStat);
+    }
+
+    private void updateFolderPracticeCursor(
+            ProblemSubmissionRequest.CreateProblemSubmissionRequest request
+    ) {
+        if (request.getFolderId() == null) {
+            throw new GeneralException(ErrorStatus.FOLDER_NOT_FOUND);
+        }
+
+        folderPracticeCursorService.updateAfterSubmit(
+                request.getFolderId(),
+                request.getProblemId()
+        );
     }
 
     private LearningProgress getOrCreateSingleUserLearningProgressWithLock() {
