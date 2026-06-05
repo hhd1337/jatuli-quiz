@@ -3,6 +3,7 @@ package com.hhd1337.jatuli_quiz.domain.problem.converter;
 import com.hhd1337.jatuli_quiz.domain.folder.entity.Folder;
 import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemBookmarkResponse;
+import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemCopyResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
 import java.util.List;
@@ -74,6 +75,31 @@ public class ProblemConverter {
                 .problems(problems.stream()
                         .map(ProblemConverter::toBookmarkedPracticeProblemItem)
                         .toList())
+                .build();
+    }
+
+    public static ProblemCopyResponse.CopyProblemsResponse toCopyProblemsResponse(
+            Long folderId,
+            List<Problem> problems
+    ) {
+        List<ProblemCopyResponse.CopyProblemItem> problemItems = problems.stream()
+                .map(ProblemConverter::toCopyProblemItem)
+                .toList();
+
+        return ProblemCopyResponse.CopyProblemsResponse.builder()
+                .folderId(folderId)
+                .totalCount(problemItems.size())
+                .problems(problemItems)
+                .build();
+    }
+
+    private static ProblemCopyResponse.CopyProblemItem toCopyProblemItem(Problem problem) {
+        return ProblemCopyResponse.CopyProblemItem.builder()
+                .problemId(problem.getProblemId())
+                .problemNum(problem.getProblemNum())
+                .questionText(problem.getQuestionText())
+                .explanationText(problem.getExplanationText())
+                .answerText(problem.getAnswerText())
                 .build();
     }
 }

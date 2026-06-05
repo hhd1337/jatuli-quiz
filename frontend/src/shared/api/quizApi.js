@@ -114,3 +114,11 @@ export async function toggleProblemBookmark(problemId) {
         isBookmarked: !!result.isBookmarked,
     };
 }
+
+export async function getFolderProblemsForCopy(folderId) {
+    const response = await apiClient.get(
+        `/api/v1/problems/folders/${folderId}/copy`
+    );
+
+    return response.data.result;
+}

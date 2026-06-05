@@ -115,4 +115,13 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     boolean existsByFolder(Folder folder);
 
     List<Problem> findByFolder_FolderIdOrderByProblemIdAsc(Long folderId);
+
+    @Query("""
+            select p
+            from Problem p
+            join fetch p.folder f
+            where f.folderId in :folderIds
+            order by f.folderId asc, p.problemNum asc, p.problemId asc
+            """)
+    List<Problem> findAllByFolderIdsForCopy(@Param("folderIds") List<Long> folderIds);
 }

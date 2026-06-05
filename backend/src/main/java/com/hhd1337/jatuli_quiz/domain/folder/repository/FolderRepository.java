@@ -34,4 +34,5 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
             """)
     Integer findMaxSortOrderByParentFolderId(@Param("parentFolderId") Long parentFolderId);
 
+    List<Folder> findAllByParentFolder_FolderId(Long parentFolderId);
 }
