@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import AppShell from "./AppShell";
+import LoginPage from "../pages/auth/LoginPage";
 
 import HomePage from "../pages/home/HomePage";
 import QuizPlayPage from "../pages/quiz/QuizPlayPage";
@@ -15,6 +16,7 @@ export const router = createBrowserRouter([
       { path: "/quiz/play", element: <QuizPlayPage /> },
       { path: "/quiz/:quizId/edit", element: <QuizEditPage /> },
       { path: "/test/health", element: <HealthCheckPage /> },
+      { path: "/login", element: <LoginPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

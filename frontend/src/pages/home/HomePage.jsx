@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getHomeData } from "../../shared/api/homeApi";
+import { getAuthStatus, logout } from "../../shared/api/authApi";
+
 import {
     createFolder,
     renameFolder,
@@ -57,6 +59,18 @@ const buttonBaseStyle = {
     borderRadius: 10,
     fontWeight: 700,
     fontSize: 15,
+};
+
+const authButtonStyle = {
+    border: "1px solid var(--color-border)",
+    background: "var(--color-button-bg)",
+    color: "var(--color-button-text)",
+    borderRadius: 999,
+    padding: "7px 12px",
+    fontSize: 13,
+    fontWeight: 800,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
 };
 
 const folderActionButtonStyle = {
@@ -962,6 +976,9 @@ export default function HomePage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
+    const [authLoading, setAuthLoading] = useState(true);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+
     const [initialCollapsedFolderIds] = useState(() =>
         readCollapsedFolderIdsFromStorage()
     );
@@ -1325,8 +1342,48 @@ export default function HomePage() {
         }
     }
 
+    async function fetchAuthStatus() {
+        try {
+            setAuthLoading(true);
+
+            const result = await getAuthStatus();
+
+            setIsAuthenticated(Boolean(result?.authenticated));
+        } catch (err) {
+            console.error("인증 상태 조회 실패:", err);
+            setIsAuthenticated(false);
+        } finally {
+            setAuthLoading(false);
+        }
+    }
+
+    function handleGoLogin() {
+        navigate("/login");
+    }
+
+    async function handleLogout() {
+        const confirmed = window.confirm("로그아웃할까요?");
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            await logout();
+
+            setIsAuthenticated(false);
+            setIsManageMode(false);
+
+            alert("로그아웃되었습니다.");
+        } catch (err) {
+            console.error("로그아웃 실패:", err);
+            alert("로그아웃에 실패했습니다.");
+        }
+    }
+
     useEffect(() => {
         fetchHomeData();
+        fetchAuthStatus();
     }, []);
 
     if (loading) {
@@ -1389,12 +1446,16 @@ export default function HomePage() {
                     style={{
                         display: "flex",
                         justifyContent: "space-between",
-                        alignItems: "flex-end",
+                        alignItems: "flex-start",
                         gap: 16,
                         marginBottom: 7,
                     }}
                 >
-                    <div>
+                    <div
+                        style={{
+                            minWidth: 0,
+                        }}
+                    >
                         <h1
                             style={{
                                 margin: 0,
@@ -1424,6 +1485,27 @@ export default function HomePage() {
                             <li>자신을 믿지 못하는 녀석은 노력할 가치도 없다. 나는 나를 믿는다.</li>
                         </ol>
                     </div>
+
+                    <button
+                        type="button"
+                        onClick={isAuthenticated ? handleLogout : handleGoLogin}
+                        disabled={authLoading}
+                        style={{
+                            ...authButtonStyle,
+                            marginTop: 1,
+                            opacity: authLoading ? 0.6 : 1,
+                            cursor: authLoading ? "not-allowed" : "pointer",
+                            background: isAuthenticated
+                                ? "var(--color-primary)"
+                                : "var(--color-button-bg)",
+                            color: isAuthenticated
+                                ? "var(--color-bg)"
+                                : "var(--color-button-text)",
+                        }}
+                        aria-label={isAuthenticated ? "로그아웃" : "로그인"}
+                    >
+                        {authLoading ? "확인 중" : isAuthenticated ? "로그아웃" : "로그인"}
+                    </button>
                 </div>
             </header>
 
@@ -1696,24 +1778,39 @@ export default function HomePage() {
                                 </h2>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={() => setIsManageMode((prev) => !prev)}
-                                style={{
-                                    ...getButtonStyle(false),
-                                    padding: "7px 12px",
-                                    marginBottom: 10,
-                                    fontSize: 13,
-                                    background: isManageMode
-                                        ? "var(--color-primary)"
-                                        : "var(--color-button-bg)",
-                                    color: isManageMode
-                                        ? "var(--color-bg)"
-                                        : "var(--color-button-text)",
-                                }}
-                            >
-                                {isManageMode ? "관리 모드 끄기" : "관리 모드"}
-                            </button>
+                            {isAuthenticated ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsManageMode((prev) => !prev)}
+                                    style={{
+                                        ...getButtonStyle(false),
+                                        padding: "7px 12px",
+                                        marginBottom: 10,
+                                        fontSize: 13,
+                                        background: isManageMode
+                                            ? "var(--color-primary)"
+                                            : "var(--color-button-bg)",
+                                        color: isManageMode
+                                            ? "var(--color-bg)"
+                                            : "var(--color-button-text)",
+                                    }}
+                                >
+                                    {isManageMode ? "관리 모드 끄기" : "관리 모드"}
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleGoLogin}
+                                    style={{
+                                        ...getButtonStyle(false),
+                                        padding: "7px 12px",
+                                        marginBottom: 10,
+                                        fontSize: 13,
+                                    }}
+                                >
+                                    관리 로그인
+                                </button>
+                            )}
                         </div>
 
                         {rootFolders.map((folder, index) => (
