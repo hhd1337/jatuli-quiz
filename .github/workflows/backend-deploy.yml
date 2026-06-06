@@ -65,8 +65,11 @@ jobs:
               --name jatuli-backend-container \
               --restart unless-stopped \
               -p 8080:8080 \
+              -e SPRING_PROFILES_ACTIVE='prod' \
               -e DB_URL='${{ secrets.DB_URL }}' \
               -e DB_USERNAME='${{ secrets.DB_USERNAME }}' \
               -e DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \
+              -e JATULI_ADMIN_USERNAME='${{ secrets.JATULI_ADMIN_USERNAME }}' \
+              -e JATULI_ADMIN_PASSWORD_HASH='${{ secrets.JATULI_ADMIN_PASSWORD_HASH }}' \
               ${{ env.IMAGE_NAME }}
             docker image prune -f
