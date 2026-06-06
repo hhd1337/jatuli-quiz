@@ -13,10 +13,22 @@ spring:
       hibernate:
         format_sql: false
 
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: true
+        same-site: lax
+
 app:
+  admin:
+    username: ${JATULI_ADMIN_USERNAME}
+    password-hash: ${JATULI_ADMIN_PASSWORD_HASH}
+
   cors:
-    allowed-origins: >
-      https://jatuli.online,
-      https://www.jatuli.online,
-      https://jatuli-quiz-frontend.vercel.app,
-      https://api.jatuli.online
+    allowed-origins:
+      - https://jatuli.online
+      - https://www.jatuli.online
+      - https://jatuli-quiz-frontend.vercel.app
+      - https://api.jatuli.online
