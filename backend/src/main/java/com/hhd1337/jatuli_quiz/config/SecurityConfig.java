@@ -5,13 +5,16 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
@@ -35,7 +38,14 @@ public class SecurityConfig {
 
     private final AdminProperties adminProperties;
     private final CorsProperties corsProperties;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${server.servlet.session.cookie.secure:false}")
+    private boolean cookieSecure;
+
+    @Value("${server.servlet.session.cookie.same-site:lax}")
+    private String cookieSameSite;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -53,15 +63,31 @@ public class SecurityConfig {
     }
 
     @Bean
+    public CookieCsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+
+        repository.setCookieCustomizer((ResponseCookie.ResponseCookieBuilder builder) ->
+                builder
+                        .secure(cookieSecure)
+                        .sameSite(normalizeSameSite(cookieSameSite))
+                        .path("/")
+        );
+
+        return repository;
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRepository(csrfTokenRepository())
 
-                        // 조회성 POST API는 데이터 변경이 아니므로 CSRF 검사에서 제외
+                        // 로그인/로그아웃 요청과 조회성 POST API는 CSRF 검사에서 제외
                         .ignoringRequestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/logout",
                                 "/practice/random",
                                 "/practice/bookmarks",
                                 "/api/v1/problems/bookmarked/practice"
@@ -73,6 +99,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/me").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
 
                         // 헬스 체크
                         .requestMatchers(HttpMethod.GET, "/health").permitAll()
@@ -181,6 +208,21 @@ public class SecurityConfig {
             config.setAllowCredentials(true);
 
             return config;
+        };
+    }
+
+    private String normalizeSameSite(String sameSite) {
+        if (sameSite == null || sameSite.isBlank()) {
+            return "Lax";
+        }
+
+        String normalized = sameSite.trim().toLowerCase(Locale.ROOT);
+
+        return switch (normalized) {
+            case "none" -> "None";
+            case "strict" -> "Strict";
+            case "lax" -> "Lax";
+            default -> "Lax";
         };
     }
 
