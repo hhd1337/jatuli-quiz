@@ -76,4 +76,16 @@ public class RoutineController {
     ) {
         return ApiResponse.onSuccess(routineService.skipPeriod(periodId));
     }
+    
+    @Operation(
+            summary = "루틴 구간 대기 상태로 변경",
+            description = "완료 처리된 특정 루틴 시간 구간을 다시 대기 상태로 변경합니다. "
+                    + "사용자가 실수로 완료 처리했거나, 다시 미완료 상태로 되돌리고 싶을 때 사용합니다."
+    )
+    @PatchMapping("/periods/{periodId}/pending")
+    public ApiResponse<RoutineResponse.DailyRoutineResponse> resetPeriod(
+            @PathVariable Long periodId
+    ) {
+        return ApiResponse.onSuccess(routineService.resetPeriod(periodId));
+    }
 }

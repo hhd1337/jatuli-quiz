@@ -98,4 +98,14 @@ public class RoutineServiceImpl implements RoutineService {
 
         return routineConverter.toDailyRoutineResponse(period.getDailyRoutine());
     }
+
+    @Override
+    public RoutineResponse.DailyRoutineResponse resetPeriod(Long periodId) {
+        RoutinePeriod period = routinePeriodRepository.findById(periodId)
+                .orElseThrow(() -> new IllegalArgumentException("루틴 구간을 찾을 수 없습니다."));
+
+        period.resetToPending();
+
+        return routineConverter.toDailyRoutineResponse(period.getDailyRoutine());
+    }
 }

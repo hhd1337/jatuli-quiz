@@ -15,4 +15,6 @@ public interface RoutineService {
     RoutineResponse.DailyRoutineResponse completePeriod(Long periodId);
 
     RoutineResponse.DailyRoutineResponse skipPeriod(Long periodId);
+
+    RoutineResponse.DailyRoutineResponse resetPeriod(Long periodId);
 }

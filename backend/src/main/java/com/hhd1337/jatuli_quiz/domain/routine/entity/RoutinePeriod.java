@@ -78,4 +78,9 @@ public class RoutinePeriod extends BaseEntity {
     public void skip() {
         this.status = RoutinePeriodStatus.SKIPPED;
     }
+
+    public void resetToPending() {
+        this.status = RoutinePeriodStatus.PENDING;
+        this.completedAt = null;
+    }
 }
