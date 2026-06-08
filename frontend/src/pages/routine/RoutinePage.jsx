@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     completeRoutinePeriod,
@@ -12,7 +12,7 @@ const DEFAULT_PERIODS = [
         label: "기상 준비",
         startTime: "05:40:00",
         endTime: "06:00:00",
-        taskContent: "기상, 세수, 책상 앞에 앉기",
+        taskContent: "기상, 계획등록",
         sortOrder: 1,
         type: "ETC",
     },
@@ -25,19 +25,35 @@ const DEFAULT_PERIODS = [
         type: "STUDY",
     },
     {
+        label: "1교시 쉬는시간",
+        startTime: "06:50:00",
+        endTime: "07:00:00",
+        taskContent: "쉬기, 다음 교시 준비",
+        sortOrder: 3,
+        type: "BREAK",
+    },
+    {
         label: "2교시",
         startTime: "07:00:00",
         endTime: "07:50:00",
         taskContent: "",
-        sortOrder: 3,
+        sortOrder: 4,
         type: "STUDY",
+    },
+    {
+        label: "2교시 쉬는시간",
+        startTime: "07:50:00",
+        endTime: "08:00:00",
+        taskContent: "쉬기, 다음 교시 준비",
+        sortOrder: 5,
+        type: "BREAK",
     },
     {
         label: "3교시",
         startTime: "08:00:00",
         endTime: "08:50:00",
         taskContent: "",
-        sortOrder: 4,
+        sortOrder: 6,
         type: "STUDY",
     },
     {
@@ -45,7 +61,7 @@ const DEFAULT_PERIODS = [
         startTime: "08:50:00",
         endTime: "09:20:00",
         taskContent: "샤워",
-        sortOrder: 5,
+        sortOrder: 7,
         type: "BREAK",
     },
     {
@@ -53,31 +69,47 @@ const DEFAULT_PERIODS = [
         startTime: "09:20:00",
         endTime: "10:00:00",
         taskContent: "",
-        sortOrder: 6,
+        sortOrder: 8,
         type: "STUDY",
+    },
+    {
+        label: "4교시 쉬는시간",
+        startTime: "10:00:00",
+        endTime: "10:10:00",
+        taskContent: "쉬기, 다음 교시 준비",
+        sortOrder: 9,
+        type: "BREAK",
     },
     {
         label: "5교시",
         startTime: "10:10:00",
         endTime: "11:00:00",
         taskContent: "",
-        sortOrder: 7,
+        sortOrder: 10,
         type: "STUDY",
+    },
+    {
+        label: "5교시 쉬는시간",
+        startTime: "11:00:00",
+        endTime: "11:10:00",
+        taskContent: "쉬기, 다음 교시 준비",
+        sortOrder: 11,
+        type: "BREAK",
     },
     {
         label: "6교시",
         startTime: "11:10:00",
         endTime: "12:00:00",
         taskContent: "",
-        sortOrder: 8,
+        sortOrder: 12,
         type: "STUDY",
     },
     {
         label: "점심 쉬는 시간",
         startTime: "12:00:00",
         endTime: "15:00:00",
-        taskContent: "쉬기, 준비, 웹 예배하기",
-        sortOrder: 9,
+        taskContent: "3시간 빡 쉬기!",
+        sortOrder: 13,
         type: "BREAK",
     },
     {
@@ -85,7 +117,7 @@ const DEFAULT_PERIODS = [
         startTime: "15:00:00",
         endTime: "16:00:00",
         taskContent: "",
-        sortOrder: 10,
+        sortOrder: 14,
         type: "STUDY",
     },
     {
@@ -93,7 +125,7 @@ const DEFAULT_PERIODS = [
         startTime: "16:00:00",
         endTime: "17:00:00",
         taskContent: "",
-        sortOrder: 11,
+        sortOrder: 15,
         type: "STUDY",
     },
     {
@@ -101,7 +133,7 @@ const DEFAULT_PERIODS = [
         startTime: "17:00:00",
         endTime: "18:00:00",
         taskContent: "",
-        sortOrder: 12,
+        sortOrder: 16,
         type: "STUDY",
     },
     {
@@ -109,7 +141,7 @@ const DEFAULT_PERIODS = [
         startTime: "18:00:00",
         endTime: "19:00:00",
         taskContent: "",
-        sortOrder: 13,
+        sortOrder: 17,
         type: "STUDY",
     },
     {
@@ -117,7 +149,7 @@ const DEFAULT_PERIODS = [
         startTime: "19:00:00",
         endTime: "20:00:00",
         taskContent: "",
-        sortOrder: 14,
+        sortOrder: 18,
         type: "STUDY",
     },
     {
@@ -125,18 +157,21 @@ const DEFAULT_PERIODS = [
         startTime: "20:00:00",
         endTime: "21:00:00",
         taskContent: "",
-        sortOrder: 15,
+        sortOrder: 19,
         type: "STUDY",
     },
     {
         label: "저녁 쉬는 시간",
         startTime: "21:00:00",
         endTime: "22:30:00",
-        taskContent: "쉬기, 준비, 웹 예배하기",
-        sortOrder: 16,
+        taskContent: "집 도착, 1시간쯤 빡 쉬기!",
+        sortOrder: 20,
         type: "BREAK",
     },
 ];
+
+const CLOCK_FONT_FAMILY =
+    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
 
 const pageStyle = {
     width: "100%",
@@ -299,24 +334,6 @@ function findNextPeriod(periods = [], now = new Date()) {
     );
 }
 
-function findPreviousStudyPeriod(periods = [], currentPeriod) {
-    if (!currentPeriod) return null;
-
-    const currentIndex = periods.findIndex((period) => isSamePeriod(period, currentPeriod));
-
-    if (currentIndex <= 0) {
-        return null;
-    }
-
-    for (let index = currentIndex - 1; index >= 0; index -= 1) {
-        if (periods[index].type === "STUDY") {
-            return periods[index];
-        }
-    }
-
-    return null;
-}
-
 function isSamePeriod(left, right) {
     if (!left || !right) return false;
 
@@ -366,6 +383,141 @@ function formatTimeRange(period) {
 
     return `${toTimeInputValue(period.startTime)} ~ ${toTimeInputValue(period.endTime)}`;
 }
+function isTaskTargetPeriod(period) {
+    return period?.type !== "BREAK";
+}
+
+function getPeriodTaskLabel(period) {
+    const task = period?.taskContent?.trim();
+
+    if (!task) {
+        return `${period?.label ?? "루틴"} 할 일 없음`;
+    }
+
+    return task;
+}
+
+function getPeriodIdentity(period) {
+    if (!period) return "";
+
+    return period.periodId
+        ? `id:${period.periodId}`
+        : `${period.label}-${period.startTime}-${period.endTime}`;
+}
+
+function getPreviousUncompletedTaskPeriods(periods = [], currentPeriod, now = new Date()) {
+    const sortedPeriods = sortPeriodsByTime(periods);
+
+    const currentIndex = currentPeriod
+        ? sortedPeriods.findIndex(
+            (period) => getPeriodIdentity(period) === getPeriodIdentity(currentPeriod)
+        )
+        : -1;
+
+    return sortedPeriods.filter((period, index) => {
+        if (!isTaskTargetPeriod(period)) {
+            return false;
+        }
+
+        if (period.status === "COMPLETED") {
+            return false;
+        }
+
+        if (currentIndex >= 0) {
+            return index < currentIndex;
+        }
+
+        const end = parseTodayTime(period.endTime, now);
+
+        return end <= now;
+    });
+}
+
+function buildClockTaskLines({
+                                 previousUncompletedPeriods,
+                                 currentPeriod,
+                                 nextPeriod,
+                             }) {
+    const lines = previousUncompletedPeriods.map((period) => ({
+        key: getPeriodIdentity(period),
+        text: getPeriodTaskLabel(period),
+    }));
+
+    if (currentPeriod) {
+        const isCurrentTaskTarget = isTaskTargetPeriod(currentPeriod);
+
+        if (isCurrentTaskTarget) {
+            if (currentPeriod.status !== "COMPLETED") {
+                lines.push({
+                    key: getPeriodIdentity(currentPeriod),
+                    text: getPeriodTaskLabel(currentPeriod),
+                });
+            }
+
+            if (lines.length > 0) {
+                return lines;
+            }
+
+            return [
+                {
+                    key: "current-completed",
+                    text: "현재 구간의 할 일을 완료했습니다.",
+                },
+            ];
+        }
+
+        if (lines.length > 0) {
+            return lines;
+        }
+
+        return [
+            {
+                key: getPeriodIdentity(currentPeriod),
+                text: getPeriodTaskLabel(currentPeriod),
+            },
+        ];
+    }
+
+    if (nextPeriod) {
+        lines.push({
+            key: getPeriodIdentity(nextPeriod),
+            text: `${nextPeriod.label} · ${formatTimeRange(nextPeriod)} · ${getPeriodTaskLabel(nextPeriod)}`,
+        });
+
+        return lines;
+    }
+
+    if (lines.length > 0) {
+        return lines;
+    }
+
+    return [
+        {
+            key: "done",
+            text: "오늘 등록된 모든 루틴 시간이 끝났습니다.",
+        },
+    ];
+}
+
+function getAutoFitMaxFontSize(lineCount, isClockFullscreen) {
+    if (lineCount <= 1) {
+        return isClockFullscreen ? 42 : 48;
+    }
+
+    if (lineCount === 2) {
+        return isClockFullscreen ? 32 : 34;
+    }
+
+    if (lineCount === 3) {
+        return isClockFullscreen ? 26 : 28;
+    }
+
+    if (lineCount === 4) {
+        return isClockFullscreen ? 22 : 24;
+    }
+
+    return isClockFullscreen ? 18 : 20;
+}
 
 function getStatusText(status) {
     switch (status) {
@@ -378,6 +530,128 @@ function getStatusText(status) {
         default:
             return "대기";
     }
+}
+
+function AutoFitTodoLines({
+                              lines,
+                              color,
+                              isClockFullscreen,
+                          }) {
+    const containerRef = useRef(null);
+    const contentRef = useRef(null);
+
+    const maxFontSize = getAutoFitMaxFontSize(
+        lines.length,
+        isClockFullscreen
+    );
+
+    const minFontSize = isClockFullscreen ? 13 : 14;
+
+    const [fontSize, setFontSize] = useState(maxFontSize);
+
+    useLayoutEffect(() => {
+        function resizeText() {
+            const container = containerRef.current;
+            const content = contentRef.current;
+
+            if (!container || !content) return;
+
+            let nextFontSize = maxFontSize;
+
+            content.style.fontSize = `${nextFontSize}px`;
+
+            while (
+                (content.scrollWidth > container.clientWidth ||
+                    content.scrollHeight > container.clientHeight) &&
+                nextFontSize > minFontSize
+                ) {
+                nextFontSize -= 1;
+                content.style.fontSize = `${nextFontSize}px`;
+            }
+
+            setFontSize(nextFontSize);
+        }
+
+        resizeText();
+
+        const resizeObserver = new ResizeObserver(resizeText);
+
+        if (containerRef.current) {
+            resizeObserver.observe(containerRef.current);
+        }
+
+        window.addEventListener("resize", resizeText);
+
+        return () => {
+            resizeObserver.disconnect();
+            window.removeEventListener("resize", resizeText);
+        };
+    }, [lines, maxFontSize, minFontSize]);
+
+    if (!lines.length) {
+        return null;
+    }
+
+    return (
+        <div
+            ref={containerRef}
+            style={{
+                width: "100%",
+                maxWidth: "100%",
+                maxHeight: isClockFullscreen ? "34dvh" : "24dvh",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                overflow: "hidden",
+            }}
+        >
+            {lines.length === 1 ? (
+                <div
+                    ref={contentRef}
+                    style={{
+                        width: "100%",
+                        color,
+                        fontSize,
+                        fontWeight: 900,
+                        lineHeight: 1.25,
+                        letterSpacing: "-0.06em",
+                        whiteSpace: "nowrap",
+                        textAlign: "center",
+                    }}
+                >
+                    {lines[0].text}
+                </div>
+            ) : (
+                <ol
+                    ref={contentRef}
+                    style={{
+                        width: "max-content",
+                        maxWidth: "100%",
+                        margin: 0,
+                        paddingLeft: 0,
+                        color,
+                        fontSize,
+                        fontWeight: 900,
+                        lineHeight: 1.35,
+                        letterSpacing: "-0.05em",
+                        textAlign: "left",
+                        listStylePosition: "inside",
+                    }}
+                >
+                    {lines.map((line) => (
+                        <li
+                            key={line.key}
+                            style={{
+                                whiteSpace: "nowrap",
+                            }}
+                        >
+                            {line.text}
+                        </li>
+                    ))}
+                </ol>
+            )}
+        </div>
+    );
 }
 
 function isStudyPeriod(period) {
@@ -524,6 +798,8 @@ export default function RoutinePage() {
     const [isEditMode, setIsEditMode] = useState(false);
     const [message, setMessage] = useState("");
 
+    const [isClockFullscreen, setIsClockFullscreen] = useState(false);
+
     const orderedPeriods = useMemo(
         () => sortPeriodsByTime(routine?.periods ?? []),
         [routine]
@@ -539,22 +815,24 @@ export default function RoutinePage() {
         [orderedPeriods, now]
     );
 
-    const previousStudyPeriod = useMemo(
-        () => findPreviousStudyPeriod(orderedPeriods, currentPeriod),
-        [orderedPeriods, currentPeriod]
+    const previousUncompletedTaskPeriods = useMemo(
+        () => getPreviousUncompletedTaskPeriods(orderedPeriods, currentPeriod, now),
+        [orderedPeriods, currentPeriod, now]
+    );
+
+    const clockTaskLines = useMemo(
+        () =>
+            buildClockTaskLines({
+                previousUncompletedPeriods: previousUncompletedTaskPeriods,
+                currentPeriod,
+                nextPeriod,
+            }),
+        [previousUncompletedTaskPeriods, currentPeriod, nextPeriod]
     );
 
     const isBreakTime = currentPeriod?.type === "BREAK";
 
     const clockTitle = useMemo(() => {
-        if (currentPeriod && isBreakTime) {
-            if (previousStudyPeriod?.label) {
-                return `${previousStudyPeriod.label} 쉬는시간!`;
-            }
-
-            return "쉬는시간!";
-        }
-
         if (currentPeriod) {
             return currentPeriod.label;
         }
@@ -564,7 +842,7 @@ export default function RoutinePage() {
         }
 
         return "오늘 루틴 종료";
-    }, [currentPeriod, isBreakTime, nextPeriod, previousStudyPeriod]);
+    }, [currentPeriod, nextPeriod]);
 
     const clockSeconds = useMemo(() => {
         if (currentPeriod) {
@@ -577,20 +855,6 @@ export default function RoutinePage() {
 
         return 0;
     }, [currentPeriod, nextPeriod, now]);
-
-    const clockTaskText = useMemo(() => {
-        if (currentPeriod) {
-            return currentPeriod.taskContent?.trim() || "할 일이 비어 있습니다.";
-        }
-
-        if (nextPeriod) {
-            return `${nextPeriod.label} · ${formatTimeRange(nextPeriod)} · ${
-                nextPeriod.taskContent?.trim() || "할 일이 비어 있습니다."
-            }`;
-        }
-
-        return "오늘 등록된 모든 루틴 시간이 끝났습니다.";
-    }, [currentPeriod, nextPeriod]);
 
     useEffect(() => {
         const timerId = window.setInterval(() => {
@@ -751,27 +1015,6 @@ export default function RoutinePage() {
         }
     }
 
-    async function handleCompleteCurrentPeriod() {
-        if (!currentPeriod?.periodId) {
-            alert("저장된 루틴 구간만 완료 처리할 수 있습니다.");
-            return;
-        }
-
-        try {
-            setSubmittingStatus(true);
-
-            const updatedRoutine = await completeRoutinePeriod(currentPeriod.periodId);
-
-            setRoutine(updatedRoutine);
-            setFormPeriods(toFormPeriods(updatedRoutine.periods));
-        } catch (error) {
-            console.error("루틴 완료 처리 실패:", error);
-            alert(getApiErrorMessage(error, "루틴 완료 처리에 실패했습니다."));
-        } finally {
-            setSubmittingStatus(false);
-        }
-    }
-
     async function handleTogglePeriodCompleted(period) {
         if (!period?.periodId) {
             alert("저장된 루틴 구간만 상태를 변경할 수 있습니다.");
@@ -788,30 +1031,10 @@ export default function RoutinePage() {
 
             setRoutine(updatedRoutine);
             setFormPeriods(toFormPeriods(updatedRoutine.periods));
+            setNow(new Date());
         } catch (error) {
             console.error("루틴 상태 변경 실패:", error);
             alert(getApiErrorMessage(error, "루틴 상태 변경에 실패했습니다."));
-        } finally {
-            setSubmittingStatus(false);
-        }
-    }
-
-    async function handleSkipCurrentPeriod() {
-        if (!currentPeriod?.periodId) {
-            alert("저장된 루틴 구간만 건너뜀 처리할 수 있습니다.");
-            return;
-        }
-
-        try {
-            setSubmittingStatus(true);
-
-            const updatedRoutine = await skipRoutinePeriod(currentPeriod.periodId);
-
-            setRoutine(updatedRoutine);
-            setFormPeriods(toFormPeriods(updatedRoutine.periods));
-        } catch (error) {
-            console.error("루틴 건너뜀 처리 실패:", error);
-            alert(getApiErrorMessage(error, "루틴 건너뜀 처리에 실패했습니다."));
         } finally {
             setSubmittingStatus(false);
         }
@@ -855,7 +1078,7 @@ export default function RoutinePage() {
                             fontSize: 13,
                         }}
                     >
-                        {todayDate} · 현재 시간 기준으로 교시와 할 일을 자동 표시합니다.
+                        {todayDate} · 현재 시간 기준
                     </p>
                 </div>
 
@@ -1174,9 +1397,30 @@ export default function RoutinePage() {
             ) : (
                 <>
                     <section
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                            if (!isClockFullscreen) {
+                                setIsClockFullscreen(true);
+                            }
+                        }}
+                        onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+
+                                if (!isClockFullscreen) {
+                                    setIsClockFullscreen(true);
+                                }
+                            }
+                        }}
                         style={{
-                            minHeight: "min(70vh, 620px)",
-                            borderRadius: 24,
+                            position: isClockFullscreen ? "fixed" : "relative",
+                            inset: isClockFullscreen ? 0 : "auto",
+                            zIndex: isClockFullscreen ? 9999 : "auto",
+                            width: isClockFullscreen ? "100vw" : "100%",
+                            minHeight: isClockFullscreen ? "100dvh" : "min(70vh, 620px)",
+                            height: isClockFullscreen ? "100dvh" : "auto",
+                            borderRadius: isClockFullscreen ? 0 : 24,
                             border: isBreakTime
                                 ? "1px solid #e5e7eb"
                                 : "1px solid #111827",
@@ -1187,66 +1431,72 @@ export default function RoutinePage() {
                             alignItems: "center",
                             justifyContent: "center",
                             textAlign: "center",
-                            padding: "clamp(28px, 8vw, 72px) clamp(14px, 5vw, 48px)",
+                            padding: isClockFullscreen
+                                ? "calc(env(safe-area-inset-top) + 14px) calc(env(safe-area-inset-right) + 14px) calc(env(safe-area-inset-bottom) + 14px) calc(env(safe-area-inset-left) + 14px)"
+                                : "clamp(28px, 8vw, 72px) clamp(14px, 5vw, 48px)",
                             boxSizing: "border-box",
-                            boxShadow: "0 18px 55px rgba(0, 0, 0, 0.35)",
+                            boxShadow: isClockFullscreen
+                                ? "none"
+                                : "0 18px 55px rgba(0, 0, 0, 0.35)",
+                            cursor: isClockFullscreen ? "default" : "pointer",
                         }}
                     >
-                        <div
-                            style={{
-                                color: isBreakTime ? "#111827" : "#facc15",
-                                fontSize: "clamp(38px, 11vw, 86px)",
-                                fontWeight: 900,
-                                lineHeight: 1.05,
-                                letterSpacing: "-0.08em",
-                                marginBottom: "clamp(20px, 4vw, 28px)",
-                            }}
-                        >
-                            {clockTitle}
-                        </div>
-
-                        <div
-                            style={{
-                                color: isBreakTime ? "#111827" : "#ffffff",
-                                fontFamily:
-                                    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                                fontSize: "clamp(52px, 16vw, 132px)",
-                                fontWeight: 900,
-                                lineHeight: 1,
-                                letterSpacing: "-0.08em",
-                                marginBottom: "clamp(28px, 5vw, 46px)",
-                            }}
-                        >
-                            {formatClockTime(clockSeconds)}
-                        </div>
-
-                        <div
-                            style={{
-                                color: isBreakTime ? "#111827" : "#fb7185",
-                                fontSize: "clamp(22px, 6vw, 48px)",
-                                fontWeight: 800,
-                                lineHeight: 1.35,
-                                letterSpacing: "-0.06em",
-                                maxWidth: 900,
-                                wordBreak: "keep-all",
-                                overflowWrap: "break-word",
-                            }}
-                        >
-                            {clockTaskText}
-                        </div>
-
-                        {currentPeriod && (
-                            <div
+                        {isClockFullscreen && (
+                            <button
+                                type="button"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    setIsClockFullscreen(false);
+                                }}
                                 style={{
-                                    display: "flex",
-                                    gap: 8,
-                                    justifyContent: "center",
-                                    flexWrap: "wrap",
-                                    marginTop: 28,
-                                    fontSize: 14,
-                                    fontWeight: 800,
+                                    position: "absolute",
+                                    top: "calc(env(safe-area-inset-top) + 12px)",
+                                    right: "calc(env(safe-area-inset-right) + 12px)",
+                                    border: isBreakTime ? "1px solid #111827" : "1px solid #374151",
+                                    background: isBreakTime ? "#ffffff" : "#111827",
+                                    color: isBreakTime ? "#111827" : "#ffffff",
+                                    borderRadius: 999,
+                                    padding: "9px 13px",
+                                    fontSize: 13,
+                                    fontWeight: 900,
+                                    cursor: "pointer",
                                 }}
                             >
+                                닫기
+                            </button>
+                        )}
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "clamp(8px, 2vw, 16px)",
+                                marginBottom: isClockFullscreen
+                                    ? "clamp(10px, 2vw, 18px)"
+                                    : "clamp(20px, 4vw, 28px)",
+                                marginLeft: isClockFullscreen
+                                    ? 80
+                                    : 0,
+                                maxWidth: "100%",
+                                flexWrap: "wrap",
+                            }}
+                        >
+                            <div
+                                style={{
+                                    color: isBreakTime ? "#111827" : "#facc15",
+                                    fontSize: isClockFullscreen
+                                        ? "clamp(28px, 7vw, 60px)"
+                                        : "clamp(38px, 11vw, 86px)",
+                                    fontWeight: 900,
+                                    lineHeight: 1.05,
+                                    letterSpacing: "-0.08em",
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                {clockTitle}
+                            </div>
+
+                            {currentPeriod && (
                                 <span
                                     style={{
                                         border: isBreakTime
@@ -1255,25 +1505,51 @@ export default function RoutinePage() {
                                         borderRadius: 999,
                                         padding: "7px 12px",
                                         color: isBreakTime ? "#111827" : "#d1d5db",
+                                        fontSize: isClockFullscreen ? 12 : 14,
+                                        fontWeight: 800,
+                                        whiteSpace: "nowrap",
+                                        letterSpacing: "-0.02em",
                                     }}
                                 >
                                     {formatTimeRange(currentPeriod)}
                                 </span>
+                            )}
+                        </div>
 
-                                <span
-                                    style={{
-                                        border: isBreakTime
-                                            ? "1px solid #111827"
-                                            : "1px solid #374151",
-                                        borderRadius: 999,
-                                        padding: "7px 12px",
-                                        color: isBreakTime ? "#111827" : "#d1d5db",
-                                    }}
-                                >
-                                    {getStatusText(currentPeriod.status)}
-                                </span>
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "clamp(10px, 2vw, 18px)",
+                                marginBottom: isClockFullscreen
+                                    ? "clamp(14px, 3vw, 26px)"
+                                    : "clamp(28px, 5vw, 46px)",
+                                maxWidth: "100%",
+                            }}
+                        >
+                            <div
+                                style={{
+                                    color: isBreakTime ? "#111827" : "#ffffff",
+                                    fontFamily: CLOCK_FONT_FAMILY,
+                                    fontSize: isClockFullscreen
+                                        ? "clamp(42px, 12vw, 92px)"
+                                        : "clamp(52px, 16vw, 132px)",
+                                    fontWeight: 900,
+                                    lineHeight: 1,
+                                    letterSpacing: "-0.08em",
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                {formatClockTime(clockSeconds)}
                             </div>
-                        )}
+                        </div>
+
+                        <AutoFitTodoLines
+                            lines={clockTaskLines}
+                            color={isBreakTime ? "#111827" : "#fb7185"}
+                            isClockFullscreen={isClockFullscreen}
+                        />
 
                     </section>
 
@@ -1369,18 +1645,28 @@ export default function RoutinePage() {
                                             {period.taskContent || "할 일 없음"}
                                         </span>
 
-                                        <button
-                                            type="button"
-                                            onClick={() => handleTogglePeriodCompleted(period)}
-                                            disabled={submittingStatus}
-                                            style={{
-                                                ...getPeriodStatusButtonStyle(period),
-                                                opacity: submittingStatus ? 0.65 : 1,
-                                                cursor: submittingStatus ? "not-allowed" : "pointer",
-                                            }}
-                                        >
-                                            {period.status === "COMPLETED" ? "완료" : "대기"}
-                                        </button>
+                                        {period.type !== "BREAK" ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleTogglePeriodCompleted(period)}
+                                                disabled={submittingStatus}
+                                                style={{
+                                                    ...getPeriodStatusButtonStyle(period),
+                                                    opacity: submittingStatus ? 0.65 : 1,
+                                                    cursor: submittingStatus ? "not-allowed" : "pointer",
+                                                }}
+                                            >
+                                                {period.status === "COMPLETED" ? "완료" : "대기"}
+                                            </button>
+                                        ) : (
+                                            <span
+                                                aria-hidden="true"
+                                                style={{
+                                                    width: 52,
+                                                    height: 30,
+                                                }}
+                                            />
+                                        )}
                                     </div>
                                 );
                             })}
