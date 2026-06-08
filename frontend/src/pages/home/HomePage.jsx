@@ -1444,68 +1444,88 @@ export default function HomePage() {
             >
                 <div
                     style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        gap: 16,
+                        display: "grid",
+                        gridTemplateColumns: "minmax(0, 1fr) auto",
+                        alignItems: "start",
+                        columnGap: 12,
+                        rowGap: 5,
                         marginBottom: 7,
                     }}
                 >
+                    <h1
+                        style={{
+                            margin: 0,
+                            fontSize: 30,
+                            lineHeight: 1.15,
+                            letterSpacing: "-0.05em",
+                        }}
+                    >
+                        정진
+                    </h1>
+
                     <div
                         style={{
-                            minWidth: 0,
+                            display: "flex",
+                            flexDirection: "row",
+                            gap: 8,
+                            alignItems: "center",
+                            justifyContent: "flex-end",
+                            flexShrink: 0,
                         }}
                     >
-                        <h1
+                        <button
+                            type="button"
+                            onClick={() => navigate("/routine")}
                             style={{
-                                margin: 0,
-                                fontSize: 30,
-                                lineHeight: 1.15,
-                                letterSpacing: "-0.05em",
+                                ...authButtonStyle,
+                                background: "var(--color-button-bg)",
+                                color: "var(--color-bg)",
                             }}
+                            aria-label="루틴 시계로 이동"
                         >
-                            정진
-                        </h1>
-                        <ol
+                            ⏰
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={isAuthenticated ? handleLogout : handleGoLogin}
+                            disabled={authLoading}
                             style={{
-                                ...mutedTextStyle,
-                                marginTop: 5,
-                                marginBottom: 0,
-                                paddingLeft: 15,
-                                fontSize: 10,
-                                lineHeight: 1.7,
+                                ...authButtonStyle,
+                                opacity: authLoading ? 0.6 : 1,
+                                cursor: authLoading ? "not-allowed" : "pointer",
+                                background: isAuthenticated
+                                    ? "var(--color-primary)"
+                                    : "var(--color-button-bg)",
+                                color: isAuthenticated
+                                    ? "var(--color-bg)"
+                                    : "var(--color-button-text)",
                             }}
+                            aria-label={isAuthenticated ? "로그아웃" : "로그인"}
                         >
-                            <li>뜨거운 열정도 중요하지만, 지속적인 열정이 더 중요하다.</li>
-                            <li>나의 목표는 백엔드 개발자로서의 압도적인 기본기와 문제해결 경험이다.</li>
-                            <li>
-                                나는 조급함으로 축적 루틴을 망치지 않고, 거북이 마음으로 쌓아
-                                백엔드 괴물이 된다.
-                            </li>
-                            <li>자신을 믿지 못하는 녀석은 노력할 가치도 없다. 나는 나를 믿는다.</li>
-                        </ol>
+                            {authLoading ? "확인 중" : isAuthenticated ? "로그아웃" : "로그인"}
+                        </button>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={isAuthenticated ? handleLogout : handleGoLogin}
-                        disabled={authLoading}
+                    <ol
                         style={{
-                            ...authButtonStyle,
-                            marginTop: 1,
-                            opacity: authLoading ? 0.6 : 1,
-                            cursor: authLoading ? "not-allowed" : "pointer",
-                            background: isAuthenticated
-                                ? "var(--color-primary)"
-                                : "var(--color-button-bg)",
-                            color: isAuthenticated
-                                ? "var(--color-bg)"
-                                : "var(--color-button-text)",
+                            ...mutedTextStyle,
+                            gridColumn: "1 / -1",
+                            marginTop: 5,
+                            marginBottom: 0,
+                            paddingLeft: 15,
+                            fontSize: 10,
+                            lineHeight: 1.7,
                         }}
-                        aria-label={isAuthenticated ? "로그아웃" : "로그인"}
                     >
-                        {authLoading ? "확인 중" : isAuthenticated ? "로그아웃" : "로그인"}
-                    </button>
+                        <li>뜨거운 열정도 중요하지만, 지속적인 열정이 더 중요하다.</li>
+                        <li>나의 목표는 백엔드 개발자로서의 압도적인 기본기와 문제해결 경험이다.</li>
+                        <li>
+                            나는 조급함으로 축적 루틴을 망치지 않고, 거북이 마음으로 쌓아
+                            백엔드 괴물이 된다.
+                        </li>
+                        <li>자신을 믿지 못하는 녀석은 노력할 가치도 없다. 나는 나를 믿는다.</li>
+                    </ol>
                 </div>
             </header>
 
