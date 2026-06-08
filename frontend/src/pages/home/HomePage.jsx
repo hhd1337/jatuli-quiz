@@ -1444,54 +1444,32 @@ export default function HomePage() {
             >
                 <div
                     style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        gap: 16,
+                        display: "grid",
+                        gridTemplateColumns: "minmax(0, 1fr) auto",
+                        alignItems: "start",
+                        columnGap: 12,
+                        rowGap: 5,
                         marginBottom: 7,
                     }}
                 >
-                    <div
+                    <h1
                         style={{
-                            minWidth: 0,
+                            margin: 0,
+                            fontSize: 30,
+                            lineHeight: 1.15,
+                            letterSpacing: "-0.05em",
                         }}
                     >
-                        <h1
-                            style={{
-                                margin: 0,
-                                fontSize: 30,
-                                lineHeight: 1.15,
-                                letterSpacing: "-0.05em",
-                            }}
-                        >
-                            정진
-                        </h1>
-                        <ol
-                            style={{
-                                ...mutedTextStyle,
-                                marginTop: 5,
-                                marginBottom: 0,
-                                paddingLeft: 15,
-                                fontSize: 10,
-                                lineHeight: 1.7,
-                            }}
-                        >
-                            <li>뜨거운 열정도 중요하지만, 지속적인 열정이 더 중요하다.</li>
-                            <li>나의 목표는 백엔드 개발자로서의 압도적인 기본기와 문제해결 경험이다.</li>
-                            <li>
-                                나는 조급함으로 축적 루틴을 망치지 않고, 거북이 마음으로 쌓아
-                                백엔드 괴물이 된다.
-                            </li>
-                            <li>자신을 믿지 못하는 녀석은 노력할 가치도 없다. 나는 나를 믿는다.</li>
-                        </ol>
-                    </div>
+                        정진
+                    </h1>
 
                     <div
                         style={{
                             display: "flex",
-                            flexDirection: "column",
+                            flexDirection: "row",
                             gap: 8,
-                            alignItems: "flex-end",
+                            alignItems: "center",
+                            justifyContent: "flex-end",
                             flexShrink: 0,
                         }}
                     >
@@ -1500,12 +1478,12 @@ export default function HomePage() {
                             onClick={() => navigate("/routine")}
                             style={{
                                 ...authButtonStyle,
-                                background: "var(--color-primary)",
+                                background: "var(--color-button-bg)",
                                 color: "var(--color-bg)",
                             }}
                             aria-label="루틴 시계로 이동"
                         >
-                            루틴 시계
+                            ⏰
                         </button>
 
                         <button
@@ -1514,7 +1492,6 @@ export default function HomePage() {
                             disabled={authLoading}
                             style={{
                                 ...authButtonStyle,
-                                marginTop: 1,
                                 opacity: authLoading ? 0.6 : 1,
                                 cursor: authLoading ? "not-allowed" : "pointer",
                                 background: isAuthenticated
@@ -1529,6 +1506,26 @@ export default function HomePage() {
                             {authLoading ? "확인 중" : isAuthenticated ? "로그아웃" : "로그인"}
                         </button>
                     </div>
+
+                    <ol
+                        style={{
+                            ...mutedTextStyle,
+                            gridColumn: "1 / -1",
+                            marginTop: 5,
+                            marginBottom: 0,
+                            paddingLeft: 15,
+                            fontSize: 10,
+                            lineHeight: 1.7,
+                        }}
+                    >
+                        <li>뜨거운 열정도 중요하지만, 지속적인 열정이 더 중요하다.</li>
+                        <li>나의 목표는 백엔드 개발자로서의 압도적인 기본기와 문제해결 경험이다.</li>
+                        <li>
+                            나는 조급함으로 축적 루틴을 망치지 않고, 거북이 마음으로 쌓아
+                            백엔드 괴물이 된다.
+                        </li>
+                        <li>자신을 믿지 못하는 녀석은 노력할 가치도 없다. 나는 나를 믿는다.</li>
+                    </ol>
                 </div>
             </header>
 
