@@ -1486,26 +1486,49 @@ export default function HomePage() {
                         </ol>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={isAuthenticated ? handleLogout : handleGoLogin}
-                        disabled={authLoading}
+                    <div
                         style={{
-                            ...authButtonStyle,
-                            marginTop: 1,
-                            opacity: authLoading ? 0.6 : 1,
-                            cursor: authLoading ? "not-allowed" : "pointer",
-                            background: isAuthenticated
-                                ? "var(--color-primary)"
-                                : "var(--color-button-bg)",
-                            color: isAuthenticated
-                                ? "var(--color-bg)"
-                                : "var(--color-button-text)",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 8,
+                            alignItems: "flex-end",
+                            flexShrink: 0,
                         }}
-                        aria-label={isAuthenticated ? "로그아웃" : "로그인"}
                     >
-                        {authLoading ? "확인 중" : isAuthenticated ? "로그아웃" : "로그인"}
-                    </button>
+                        <button
+                            type="button"
+                            onClick={() => navigate("/routine")}
+                            style={{
+                                ...authButtonStyle,
+                                background: "var(--color-primary)",
+                                color: "var(--color-bg)",
+                            }}
+                            aria-label="루틴 시계로 이동"
+                        >
+                            루틴 시계
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={isAuthenticated ? handleLogout : handleGoLogin}
+                            disabled={authLoading}
+                            style={{
+                                ...authButtonStyle,
+                                marginTop: 1,
+                                opacity: authLoading ? 0.6 : 1,
+                                cursor: authLoading ? "not-allowed" : "pointer",
+                                background: isAuthenticated
+                                    ? "var(--color-primary)"
+                                    : "var(--color-button-bg)",
+                                color: isAuthenticated
+                                    ? "var(--color-bg)"
+                                    : "var(--color-button-text)",
+                            }}
+                            aria-label={isAuthenticated ? "로그아웃" : "로그인"}
+                        >
+                            {authLoading ? "확인 중" : isAuthenticated ? "로그아웃" : "로그인"}
+                        </button>
+                    </div>
                 </div>
             </header>
 
