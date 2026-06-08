@@ -5,6 +5,7 @@ import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -124,4 +125,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
             order by f.folderId asc, p.problemNum asc, p.problemId asc
             """)
     List<Problem> findAllByFolderIdsForCopy(@Param("folderIds") List<Long> folderIds);
+
+    @EntityGraph(attributePaths = {"folder"})
+    List<Problem> findAllByProblemIdIn(List<Long> problemIds);
 }

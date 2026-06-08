@@ -90,7 +90,8 @@ public class SecurityConfig {
                                 "/api/auth/logout",
                                 "/practice/random",
                                 "/practice/bookmarks",
-                                "/api/v1/problems/bookmarked/practice"
+                                "/api/v1/problems/bookmarked/practice",
+                                "/api/v1/test/github-daily-upload"
                         )
                 )
 
@@ -115,6 +116,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/practice/random").permitAll()
                         .requestMatchers(HttpMethod.POST, "/practice/bookmarks").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/problems/bookmarked/practice").permitAll()
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/test/github-daily-upload").permitAll()
 
                         // 문제 데이터 변경 API 보호
                         .requestMatchers(HttpMethod.POST, "/api/v1/problems").authenticated()

@@ -72,5 +72,12 @@ jobs:
               -e DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \
               -e JATULI_ADMIN_USERNAME='${{ secrets.JATULI_ADMIN_USERNAME }}' \
               -e JATULI_ADMIN_PASSWORD_HASH='${{ secrets.JATULI_ADMIN_PASSWORD_HASH }}' \
+              -e GITHUB_DAILY_OWNER='hhd1337' \
+              -e GITHUB_DAILY_REPO='jatuli-quiz-daily-records' \
+              -e GITHUB_DAILY_BRANCH='main' \
+              -e GITHUB_DAILY_TOKEN='${{ secrets.JATULI_GITHUB_DAILY_TOKEN }}' \
+              -e GITHUB_DAILY_BASE_PATH='daily' \
+              -e GITHUB_DAILY_COMMITTER_NAME='hhd1337' \
+              -e GITHUB_DAILY_COMMITTER_EMAIL='goeka1337@gmail.com' \
               ${{ env.IMAGE_NAME }}
             docker image prune -f

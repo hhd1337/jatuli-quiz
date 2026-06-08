@@ -32,3 +32,14 @@ app:
       - https://www.jatuli.online
       - https://jatuli-quiz-frontend.vercel.app
       - https://api.jatuli.online
+
+github:
+  daily-upload:
+    enabled: true
+    owner: ${GITHUB_DAILY_OWNER}
+    repo: ${GITHUB_DAILY_REPO}
+    branch: ${GITHUB_DAILY_BRANCH:main}
+    token: ${GITHUB_DAILY_TOKEN}
+    base-path: ${GITHUB_DAILY_BASE_PATH:daily}
+    committer-name: ${GITHUB_DAILY_COMMITTER_NAME:jatuli-bot}
+    committer-email: ${GITHUB_DAILY_COMMITTER_EMAIL:jatuli-bot@example.com}
