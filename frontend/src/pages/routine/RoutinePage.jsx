@@ -246,6 +246,30 @@ const textareaStyle = {
     lineHeight: 1.5,
 };
 
+function getTaskTextareaStyle(period) {
+    const isStudy = period?.type === "STUDY";
+
+    return {
+        ...textareaStyle,
+        background: isStudy
+            ? "rgba(245, 158, 11, 0.12)"
+            : "var(--color-bg)",
+        border: isStudy
+            ? "1px solid rgba(245, 158, 11, 0.75)"
+            : "1px solid var(--color-border)",
+        color: isStudy
+            ? "#fff7ed"
+            : "var(--color-text)",
+        fontWeight: isStudy ? 800 : 500,
+        boxShadow: isStudy
+            ? "inset 0 0 0 1px rgba(245, 158, 11, 0.15)"
+            : "none",
+        caretColor: isStudy
+            ? "var(--color-primary)"
+            : "auto",
+    };
+}
+
 function getTodayDateText() {
     const now = new Date();
     const year = now.getFullYear();
@@ -1343,7 +1367,7 @@ export default function RoutinePage() {
                                         }
                                         placeholder="이 시간에 할 일을 적어주세요"
                                         rows={1}
-                                        style={textareaStyle}
+                                        style={getTaskTextareaStyle(period)}
                                     />
                                 </label>
 
