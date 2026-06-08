@@ -84,14 +84,26 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository())
 
-                        // 로그인/로그아웃 요청과 조회성 POST API는 CSRF 검사에서 제외
+                        /*
+                         * CSRF 검사 제외 경로
+                         *
+                         * Swagger에서 PUT/PATCH/POST/DELETE 요청을 직접 테스트할 때는
+                         * CSRF 토큰이 자동으로 포함되지 않아 403이 발생할 수 있다.
+                         *
+                         * /api/v1/routines/** 는 현재 루틴 시계 MVP 개발/검증 단계에서만 임시로 제외한다.
+                         * 프론트 연동 후에는 CSRF 토큰을 정상 전송하도록 바꾸고,
+                         * 이 예외는 제거하는 것이 좋다.
+                         */
                         .ignoringRequestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/logout",
                                 "/practice/random",
                                 "/practice/bookmarks",
                                 "/api/v1/problems/bookmarked/practice",
-                                "/api/v1/test/github-daily-upload"
+                                "/api/v1/test/github-daily-upload",
+
+                                // TODO: 개발 단계 Swagger 테스트용 임시 허용
+                                "/api/v1/routines/**"
                         )
                 )
 
@@ -107,6 +119,16 @@ public class SecurityConfig {
 
                         // Swagger는 일단 허용. 운영에서 막고 싶으면 authenticated()로 변경
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+
+                        /*
+                         * TODO: 개발 단계 Swagger 테스트용 임시 허용
+                         *
+                         * 루틴 시계 기능은 최종적으로 로그인 후 사용 가능해야 한다.
+                         * 다만 현재는 프론트 연동 전 Swagger에서 API 동작을 먼저 확인하기 위해 permitAll 처리한다.
+                         *
+                         * 프론트 연동 후에는 아래 설정을 authenticated()로 변경한다.
+                         */
+                        .requestMatchers("/api/v1/routines/**").permitAll()
 
                         // 조회 API 허용
                         .requestMatchers(HttpMethod.GET, "/**").permitAll()
