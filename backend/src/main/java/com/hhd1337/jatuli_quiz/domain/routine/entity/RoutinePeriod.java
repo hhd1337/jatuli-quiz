@@ -70,13 +70,17 @@ public class RoutinePeriod extends BaseEntity {
         this.dailyRoutine = dailyRoutine;
     }
 
-    public void complete() {
+    public void complete(LocalDateTime completedAt) {
+        if (this.status != RoutinePeriodStatus.COMPLETED) {
+            this.completedAt = completedAt;
+        }
+
         this.status = RoutinePeriodStatus.COMPLETED;
-        this.completedAt = LocalDateTime.now();
     }
 
     public void skip() {
         this.status = RoutinePeriodStatus.SKIPPED;
+        this.completedAt = null;
     }
 
     public void resetToPending() {
