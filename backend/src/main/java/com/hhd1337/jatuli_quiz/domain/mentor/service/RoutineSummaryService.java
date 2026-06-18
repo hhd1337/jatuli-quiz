@@ -4,6 +4,7 @@ import com.hhd1337.jatuli_quiz.domain.mentor.dto.MentorDto;
 import com.hhd1337.jatuli_quiz.domain.routine.entity.DailyRoutine;
 import com.hhd1337.jatuli_quiz.domain.routine.entity.RoutinePeriod;
 import com.hhd1337.jatuli_quiz.domain.routine.entity.RoutinePeriodStatus;
+import com.hhd1337.jatuli_quiz.domain.routine.entity.RoutinePeriodType;
 import com.hhd1337.jatuli_quiz.domain.routine.repository.DailyRoutineRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,19 +25,22 @@ public class RoutineSummaryService {
         DailyRoutine dailyRoutine = dailyRoutineRepository.findByRoutineDate(date)
                 .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 루틴이 없습니다. date=" + date));
 
-        List<RoutinePeriod> periods = dailyRoutine.getPeriods();
+        List<RoutinePeriod> taskPeriods = dailyRoutine.getPeriods()
+                .stream()
+                .filter(this::isTaskTargetPeriod)
+                .toList();
 
-        int totalCount = periods.size();
+        int totalCount = taskPeriods.size();
 
-        int completedCount = (int) periods.stream()
+        int completedCount = (int) taskPeriods.stream()
                 .filter(period -> period.getStatus() == RoutinePeriodStatus.COMPLETED)
                 .count();
 
-        int pendingCount = (int) periods.stream()
+        int pendingCount = (int) taskPeriods.stream()
                 .filter(period -> period.getStatus() == RoutinePeriodStatus.PENDING)
                 .count();
 
-        int skippedCount = (int) periods.stream()
+        int skippedCount = (int) taskPeriods.stream()
                 .filter(period -> period.getStatus() == RoutinePeriodStatus.SKIPPED)
                 .count();
 
@@ -44,26 +48,26 @@ public class RoutineSummaryService {
                 ? 0
                 : (int) Math.round((completedCount * 100.0) / totalCount);
 
-        LocalDateTime firstCompletedAt = periods.stream()
+        LocalDateTime firstCompletedAt = taskPeriods.stream()
                 .filter(period -> period.getStatus() == RoutinePeriodStatus.COMPLETED)
                 .map(RoutinePeriod::getCompletedAt)
                 .filter(completedAt -> completedAt != null)
                 .min(Comparator.naturalOrder())
                 .orElse(null);
 
-        LocalDateTime lastCompletedAt = periods.stream()
+        LocalDateTime lastCompletedAt = taskPeriods.stream()
                 .filter(period -> period.getStatus() == RoutinePeriodStatus.COMPLETED)
                 .map(RoutinePeriod::getCompletedAt)
                 .filter(completedAt -> completedAt != null)
                 .max(Comparator.naturalOrder())
                 .orElse(null);
 
-        List<MentorDto.RoutineTaskSummary> completedTasks = periods.stream()
+        List<MentorDto.RoutineTaskSummary> completedTasks = taskPeriods.stream()
                 .filter(period -> period.getStatus() == RoutinePeriodStatus.COMPLETED)
                 .map(this::toRoutineTaskSummary)
                 .toList();
 
-        List<MentorDto.RoutineTaskSummary> uncompletedTasks = periods.stream()
+        List<MentorDto.RoutineTaskSummary> uncompletedTasks = taskPeriods.stream()
                 .filter(period -> period.getStatus() != RoutinePeriodStatus.COMPLETED)
                 .map(this::toRoutineTaskSummary)
                 .toList();
@@ -82,6 +86,10 @@ public class RoutineSummaryService {
                 completedTasks,
                 uncompletedTasks
         );
+    }
+
+    private boolean isTaskTargetPeriod(RoutinePeriod period) {
+        return period.getType() != RoutinePeriodType.BREAK;
     }
 
     private MentorDto.RoutineTaskSummary toRoutineTaskSummary(RoutinePeriod period) {
