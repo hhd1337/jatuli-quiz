@@ -90,7 +90,7 @@ public class SecurityConfig {
                          * Swagger에서 PUT/PATCH/POST/DELETE 요청을 직접 테스트할 때는
                          * CSRF 토큰이 자동으로 포함되지 않아 403이 발생할 수 있다.
                          *
-                         * /api/v1/routines/** 는 현재 루틴 시계 MVP 개발/검증 단계에서만 임시로 제외한다.
+                         * /api/v1/routines/**, /api/v1/mentor/** 는 현재 MVP 개발/검증 단계에서만 임시로 제외한다.
                          * 프론트 연동 후에는 CSRF 토큰을 정상 전송하도록 바꾸고,
                          * 이 예외는 제거하는 것이 좋다.
                          */
@@ -103,7 +103,8 @@ public class SecurityConfig {
                                 "/api/v1/test/github-daily-upload",
 
                                 // TODO: 개발 단계 Swagger 테스트용 임시 허용
-                                "/api/v1/routines/**"
+                                "/api/v1/routines/**",
+                                "/api/v1/mentor/**"
                         )
                 )
 
