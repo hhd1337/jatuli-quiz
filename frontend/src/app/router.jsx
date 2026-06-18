@@ -8,6 +8,8 @@ import QuizEditPage from "../pages/quiz/QuizEditPage";
 import RoutinePage from "../pages/routine/RoutinePage";
 import NotFoundPage from "../pages/error/NotFoundPage";
 import HealthCheckPage from "../pages/test/HealthCheckPage";
+import MentorPlanPage from "../pages/mentor/MentorPlanPage";
+import DailyReviewPage from "../pages/mentor/DailyReviewPage";
 
 export const router = createBrowserRouter([
     {
@@ -17,6 +19,8 @@ export const router = createBrowserRouter([
             { path: "/quiz/play", element: <QuizPlayPage /> },
             { path: "/quiz/:quizId/edit", element: <QuizEditPage /> },
             { path: "/routine", element: <RoutinePage /> },
+            { path: "/mentor/plans", element: <MentorPlanPage /> },
+            { path: "/mentor/daily-review", element: <DailyReviewPage /> },
             { path: "/test/health", element: <HealthCheckPage /> },
             { path: "/login", element: <LoginPage /> },
             { path: "*", element: <NotFoundPage /> },
