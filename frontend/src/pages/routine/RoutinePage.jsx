@@ -999,14 +999,15 @@ export default function RoutinePage() {
         setIsEditMode(true);
     }
 
-    function handleCancelEdit() {
+    function handleBackToRoutineClock() {
         if (!routine) {
-            navigate("/");
+            alert("아직 저장된 오늘 루틴이 없습니다. 먼저 오늘 루틴을 저장해주세요.");
             return;
         }
 
         setFormPeriods(toFormPeriods(routine.periods));
         setIsEditMode(false);
+        setMessage("");
     }
 
     async function handleSaveRoutine() {
@@ -1114,22 +1115,37 @@ export default function RoutinePage() {
                         justifyContent: "flex-end",
                     }}
                 >
-                    <button
-                        type="button"
-                        onClick={() => navigate("/")}
-                        style={buttonBaseStyle}
-                    >
-                        홈
-                    </button>
-
-                    {!isEditMode && (
+                    {isEditMode ? (
                         <button
                             type="button"
-                            onClick={handleStartEdit}
-                            style={primaryButtonStyle}
+                            onClick={handleBackToRoutineClock}
+                            disabled={!routine}
+                            style={{
+                                ...buttonBaseStyle,
+                                opacity: !routine ? 0.65 : 1,
+                                cursor: !routine ? "not-allowed" : "pointer",
+                            }}
                         >
-                            루틴 수정
+                            오늘루틴 돌아가기
                         </button>
+                    ) : (
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => navigate("/")}
+                                style={buttonBaseStyle}
+                            >
+                                홈
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => navigate("/mentor/plans")}
+                                style={buttonBaseStyle}
+                            >
+                                🗓️장기계획
+                            </button>
+                        </>
                     )}
                 </div>
             </header>
@@ -1410,11 +1426,15 @@ export default function RoutinePage() {
 
                         <button
                             type="button"
-                            onClick={handleCancelEdit}
-                            disabled={saving}
-                            style={buttonBaseStyle}
+                            onClick={handleBackToRoutineClock}
+                            disabled={saving || !routine}
+                            style={{
+                                ...buttonBaseStyle,
+                                opacity: saving || !routine ? 0.65 : 1,
+                                cursor: saving || !routine ? "not-allowed" : "pointer",
+                            }}
                         >
-                            취소
+                            오늘루틴 돌아가기
                         </button>
                     </div>
                 </section>
@@ -1590,6 +1610,7 @@ export default function RoutinePage() {
                                 alignItems: "center",
                                 gap: 12,
                                 marginBottom: 12,
+                                flexWrap: "wrap",
                             }}
                         >
                             <h2
@@ -1602,14 +1623,38 @@ export default function RoutinePage() {
                                 오늘 루틴 목록
                             </h2>
 
-                            <span
+                            <div
                                 style={{
-                                    ...mutedTextStyle,
-                                    fontSize: 13,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    flexWrap: "wrap",
+                                    justifyContent: "flex-end",
                                 }}
                             >
-                                {orderedPeriods.length}개 구간
-                            </span>
+                                <span
+                                    style={{
+                                        ...mutedTextStyle,
+                                        fontSize: 13,
+                                        whiteSpace: "nowrap",
+                                    }}
+                                >
+                                    {orderedPeriods.length}개 구간
+                                </span>
+
+                                <button
+                                    type="button"
+                                    onClick={handleStartEdit}
+                                    style={{
+                                        ...buttonBaseStyle,
+                                        padding: "7px 10px",
+                                        fontSize: 12,
+                                        borderRadius: 999,
+                                    }}
+                                >
+                                    ✏️ 루틴 수정
+                                </button>
+                            </div>
                         </div>
 
                         <div
@@ -1695,6 +1740,19 @@ export default function RoutinePage() {
                                 );
                             })}
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => navigate("/mentor/daily-review")}
+                            style={{
+                                ...primaryButtonStyle,
+                                width: "100%",
+                                marginTop: 16,
+                                padding: "13px 14px",
+                                fontSize: 15,
+                            }}
+                        >
+                            하루 마무리하고 AI 피드백 받기
+                        </button>
                     </section>
                 </>
             )}
