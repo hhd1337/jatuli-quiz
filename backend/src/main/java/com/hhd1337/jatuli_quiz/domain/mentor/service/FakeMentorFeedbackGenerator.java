@@ -1,8 +1,13 @@
 package com.hhd1337.jatuli_quiz.domain.mentor.service;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(
+        name = "mentor.feedback.provider",
+        havingValue = "fake"
+)
 public class FakeMentorFeedbackGenerator implements MentorFeedbackGenerator {
 
     @Override
