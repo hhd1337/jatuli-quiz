@@ -90,3 +90,28 @@
 .markdown-content > :last-child {
     margin-bottom: 0;
 }
+
+.mentor-feedback-markdown .markdown-content h2,
+.mentor-feedback-markdown .markdown-content h3 {
+    display: table;
+    width: fit-content;
+    max-width: 100%;
+    background: #333333;
+    color: #BBBBBB;
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin: 10px 0 14px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.mentor-feedback-markdown .markdown-content p,
+.mentor-feedback-markdown .markdown-content li {
+    color: #d6d3d1;
+}
+
+.mentor-feedback-markdown .markdown-content hr {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: 22px 0;
+}

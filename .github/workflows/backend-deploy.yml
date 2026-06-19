@@ -79,5 +79,11 @@ jobs:
               -e GITHUB_DAILY_BASE_PATH='daily' \
               -e GITHUB_DAILY_COMMITTER_NAME='hhd1337' \
               -e GITHUB_DAILY_COMMITTER_EMAIL='goeka1337@gmail.com' \
+              -e OPENAI_API_KEY='${{ secrets.OPENAI_API_KEY }}' \
+              -e OPENAI_MODEL='${{ secrets.OPENAI_MODEL }}' \
+              -e OPENAI_BASE_URL='https://api.openai.com/v1' \
+              -e OPENAI_TIMEOUT_SECONDS='30' \
+              -e OPENAI_MAX_OUTPUT_TOKENS='1200' \
+              -e MENTOR_FEEDBACK_PROVIDER='openai' \
               ${{ env.IMAGE_NAME }}
             docker image prune -f

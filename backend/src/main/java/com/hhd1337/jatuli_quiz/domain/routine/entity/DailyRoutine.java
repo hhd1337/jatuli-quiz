@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AccessLevel;
@@ -26,12 +27,20 @@ public class DailyRoutine extends BaseEntity {
 
     private LocalDate routineDate;
 
+    private LocalDateTime plannedAt;
+
+    private LocalDateTime lastModifiedAt;
+
     @OneToMany(mappedBy = "dailyRoutine", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortOrder asc")
     private List<RoutinePeriod> periods = new ArrayList<>();
 
     public DailyRoutine(LocalDate routineDate) {
+        LocalDateTime now = LocalDateTime.now();
+
         this.routineDate = routineDate;
+        this.plannedAt = now;
+        this.lastModifiedAt = now;
     }
 
     public void replacePeriods(List<RoutinePeriod> newPeriods) {
@@ -41,5 +50,7 @@ public class DailyRoutine extends BaseEntity {
             period.setDailyRoutine(this);
             this.periods.add(period);
         }
+
+        this.lastModifiedAt = LocalDateTime.now();
     }
 }

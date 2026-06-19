@@ -9,6 +9,7 @@ import com.hhd1337.jatuli_quiz.domain.routine.entity.RoutinePeriod;
 import com.hhd1337.jatuli_quiz.domain.routine.repository.DailyRoutineRepository;
 import com.hhd1337.jatuli_quiz.domain.routine.repository.RoutinePeriodRepository;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -84,7 +85,7 @@ public class RoutineServiceImpl implements RoutineService {
         RoutinePeriod period = routinePeriodRepository.findById(periodId)
                 .orElseThrow(() -> new IllegalArgumentException("루틴 구간을 찾을 수 없습니다."));
 
-        period.complete();
+        period.complete(LocalDateTime.now());
 
         return routineConverter.toDailyRoutineResponse(period.getDailyRoutine());
     }

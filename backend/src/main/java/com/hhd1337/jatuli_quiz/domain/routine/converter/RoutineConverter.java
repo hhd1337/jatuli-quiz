@@ -31,6 +31,8 @@ public class RoutineConverter {
         return new RoutineResponse.DailyRoutineResponse(
                 routine.getId(),
                 routine.getRoutineDate(),
+                routine.getPlannedAt(),
+                routine.getLastModifiedAt(),
                 periods
         );
     }
@@ -44,7 +46,8 @@ public class RoutineConverter {
                 period.getTaskContent(),
                 period.getSortOrder(),
                 period.getType(),
-                period.getStatus()
+                period.getStatus(),
+                period.getCompletedAt()
         );
     }
 }
