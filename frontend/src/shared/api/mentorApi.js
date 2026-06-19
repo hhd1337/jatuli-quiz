@@ -37,6 +37,7 @@ export async function getDailyReflection(date) {
 export async function generateDailyMentorFeedback(date) {
     const response = await apiClient.post("/api/v1/mentor/feedbacks/daily", null, {
         params: { date },
+        timeout: 180000,
     });
 
     return response.data.result;

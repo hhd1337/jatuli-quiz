@@ -8,6 +8,7 @@ import {
     getDailyRoutineSummary,
     saveDailyReflection,
 } from "../../shared/api/mentorApi";
+import MarkdownContent from "../../shared/components/MarkdownContent";
 
 const pageStyle = {
     width: "100%",
@@ -412,7 +413,7 @@ export default function DailyReviewPage() {
                 if (plansResult.status === "fulfilled") {
                     setPlans(plansResult.value);
                 } else {
-                    console.error("AI 멘토 계획 조회 실패:", plansResult.reason);
+                    console.error("멘토 계획 조회 실패:", plansResult.reason);
                     setPlans(null);
                 }
 
@@ -438,7 +439,7 @@ export default function DailyReviewPage() {
                         setFeedback(feedbackResult);
                     }
                 } catch (error) {
-                    console.info("생성된 오늘 AI 멘토 피드백이 아직 없습니다.", error);
+                    console.info("생성된 오늘 멘토 피드백이 아직 없습니다.", error);
                 }
             } finally {
                 if (!ignore) {
@@ -487,10 +488,10 @@ export default function DailyReviewPage() {
             const generatedFeedback = await generateDailyMentorFeedback(todayDate);
 
             setFeedback(generatedFeedback);
-            setMessage("AI 멘토 피드백이 생성되었습니다.");
+            setMessage("멘토 피드백이 생성되었습니다.");
         } catch (error) {
-            console.error("AI 멘토 피드백 생성 실패:", error);
-            alert(getApiErrorMessage(error, "AI 멘토 피드백 생성에 실패했습니다."));
+            console.error("멘토 피드백 생성 실패:", error);
+            alert(getApiErrorMessage(error, "멘토 피드백 생성에 실패했습니다."));
         } finally {
             setSavingAndGenerating(false);
         }
@@ -498,7 +499,7 @@ export default function DailyReviewPage() {
 
     async function handleCopyFeedback() {
         if (!feedback?.feedbackContent) {
-            alert("복사할 AI 멘토 피드백이 없습니다.");
+            alert("복사할 멘토 피드백이 없습니다.");
             return;
         }
 
@@ -507,9 +508,9 @@ export default function DailyReviewPage() {
 
             await navigator.clipboard.writeText(feedback.feedbackContent);
 
-            setMessage("AI 멘토 피드백을 클립보드에 복사했습니다.");
+            setMessage("멘토 피드백을 클립보드에 복사했습니다.");
         } catch (error) {
-            console.error("AI 멘토 피드백 복사 실패:", error);
+            console.error("멘토 피드백 복사 실패:", error);
             alert("복사에 실패했습니다. 브라우저 권한 또는 접속 환경을 확인해주세요.");
         } finally {
             setCopying(false);
@@ -555,7 +556,7 @@ export default function DailyReviewPage() {
                             fontSize: 13,
                         }}
                     >
-                        {todayDate} · 루틴 결과와 소감을 바탕으로 AI 멘토 피드백을 생성합니다.
+                        {todayDate} · 루틴 결과와 소감을 바탕으로 멘토 피드백을 생성합니다.
                     </p>
                 </div>
 
@@ -609,7 +610,7 @@ export default function DailyReviewPage() {
                         lineHeight: 1.6,
                     }}
                 >
-                    AI 멘토 계획이 아직 일부 비어 있습니다. 그래도 피드백 생성은 가능하지만,
+                    멘토 계획이 아직 일부 비어 있습니다. 그래도 피드백 생성은 가능하지만,
                     장기/월간/주간 계획을 입력하면 더 정확한 피드백을 받을 수 있습니다.
                     <div style={{ marginTop: 10 }}>
                         <button
@@ -838,7 +839,7 @@ export default function DailyReviewPage() {
                         cursor: savingAndGenerating || !summary ? "not-allowed" : "pointer",
                     }}
                 >
-                    {savingAndGenerating ? "AI 피드백 생성 중..." : "소감 저장하고 AI 피드백 받기"}
+                    {savingAndGenerating ? "피드백 생성 중..." : "소감 저장하고 멘토 피드백 받기"}
                 </button>
             </section>
 
@@ -860,7 +861,7 @@ export default function DailyReviewPage() {
                             letterSpacing: "-0.04em",
                         }}
                     >
-                        AI 피드백 결과
+                        📌 멘토 피드백 결과
                     </h2>
 
                     <div
@@ -901,25 +902,21 @@ export default function DailyReviewPage() {
                             lineHeight: 1.6,
                         }}
                     >
-                        아직 생성된 AI 멘토 피드백이 없습니다. 오늘 소감을 입력한 뒤 피드백을 생성해주세요.
+                        아직 생성된 멘토 피드백이 없습니다. 오늘 소감을 입력한 뒤 피드백을 생성해주세요.
                     </p>
                 ) : (
-                    <pre
+                    <div
+                        className="mentor-feedback-markdown"
                         style={{
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                            margin: 0,
-                            lineHeight: 1.7,
-                            fontFamily: "inherit",
-                            fontSize: 15,
                             background: "var(--color-bg)",
                             border: "1px solid var(--color-border)",
                             borderRadius: 14,
                             padding: 14,
+                            overflow: "hidden",
                         }}
                     >
-                        {feedback.feedbackContent}
-                    </pre>
+                        <MarkdownContent value={feedback.feedbackContent} />
+                    </div>
                 )}
             </section>
         </div>
