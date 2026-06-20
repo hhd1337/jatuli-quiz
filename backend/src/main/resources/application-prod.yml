@@ -43,3 +43,14 @@ github:
     base-path: ${GITHUB_DAILY_BASE_PATH:daily}
     committer-name: ${GITHUB_DAILY_COMMITTER_NAME:jatuli-bot}
     committer-email: ${GITHUB_DAILY_COMMITTER_EMAIL:jatuli-bot@example.com}
+
+mentor:
+  feedback:
+    provider: ${MENTOR_FEEDBACK_PROVIDER:openai}
+
+openai:
+  api-key: ${OPENAI_API_KEY}
+  model: ${OPENAI_MODEL}
+  base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+  timeout-seconds: ${OPENAI_TIMEOUT_SECONDS:180}
+  max-output-tokens: ${OPENAI_MAX_OUTPUT_TOKENS:1000}
