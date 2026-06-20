@@ -18,9 +18,9 @@ public class OpenAiProperties {
 
     private String baseUrl = "https://api.openai.com/v1";
 
-    private long timeoutSeconds = 30;
+    private long timeoutSeconds = 180;
 
-    private int maxOutputTokens = 3000;
+    private int maxOutputTokens = 1000;
 
     public String getNormalizedBaseUrl() {
         if (!StringUtils.hasText(baseUrl)) {
