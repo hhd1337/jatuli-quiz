@@ -83,7 +83,7 @@ jobs:
               -e OPENAI_MODEL='${{ secrets.OPENAI_MODEL }}' \
               -e OPENAI_BASE_URL='https://api.openai.com/v1' \
               -e OPENAI_TIMEOUT_SECONDS='180' \
-              -e OPENAI_MAX_OUTPUT_TOKENS='1000' \
+              -e OPENAI_MAX_OUTPUT_TOKENS='2000' \
               -e MENTOR_FEEDBACK_PROVIDER='openai' \
               ${{ env.IMAGE_NAME }}
             docker image prune -f
