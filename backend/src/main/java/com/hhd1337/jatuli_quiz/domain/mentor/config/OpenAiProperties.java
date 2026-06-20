@@ -20,7 +20,7 @@ public class OpenAiProperties {
 
     private long timeoutSeconds = 180;
 
-    private int maxOutputTokens = 1000;
+    private int maxOutputTokens = 2000;
 
     public String getNormalizedBaseUrl() {
         if (!StringUtils.hasText(baseUrl)) {
