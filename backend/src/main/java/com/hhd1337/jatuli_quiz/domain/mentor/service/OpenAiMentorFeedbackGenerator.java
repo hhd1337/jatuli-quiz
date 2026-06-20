@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -27,18 +28,9 @@ import tools.jackson.databind.JsonNode;
 public class OpenAiMentorFeedbackGenerator implements MentorFeedbackGenerator {
 
     private static final String SYSTEM_INSTRUCTION = """
-            너는 사용자의 1대1 취업 준비 AI 멘토다.
-            사용자의 루틴 수행 결과, 장기 계획, 월간 계획, 주간 계획, 오늘 소감을 바탕으로 하루 피드백을 작성한다.
-            
-            반드시 다음 원칙을 지켜라.
-            - 한국어로 작성한다.
-            - 사용자를 무작정 위로하지 않는다.
-            - 잘한 점은 구체적으로 칭찬한다.
-            - 아쉬운 점은 실행 행동 기준으로 지적한다.
-            - 현실적인 쓴소리는 비난이 아니라 행동 교정 중심으로 작성한다.
-            - 내일 행동 지시는 1~3개로 제한한다.
-            - 매일 읽을 수 있도록 너무 길게 쓰지 않는다.
-            - 출력 형식은 사용자가 제공한 프롬프트의 형식을 따른다.
+            너는 Java/Spring 백엔드 신입 취업을 준비하는 사용자의 멘토다.
+            입력된 장기/월간/주간 계획, 오늘 루틴 결과, 오늘 소감을 근거로 하루 피드백을 작성한다.
+            한국어로 작성하고, 출력 형식은 사용자 프롬프트의 형식을 따른다.
             """;
 
     private final OpenAiProperties openAiProperties;
@@ -63,6 +55,7 @@ public class OpenAiMentorFeedbackGenerator implements MentorFeedbackGenerator {
             JsonNode responseBody = restClient.post()
                     .uri("/responses")
                     .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON)
                     .body(requestBody)
                     .retrieve()
                     .body(JsonNode.class);
@@ -94,8 +87,8 @@ public class OpenAiMentorFeedbackGenerator implements MentorFeedbackGenerator {
         return RestClient.builder()
                 .baseUrl(properties.getNormalizedBaseUrl())
                 .requestFactory(requestFactory)
-                .defaultHeader("Authorization", "Bearer " + properties.getApiKey())
-                .defaultHeader("Accept", MediaType.APPLICATION_JSON_VALUE)
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getApiKey())
+                .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .build();
     }
 
