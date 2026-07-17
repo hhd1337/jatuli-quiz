@@ -10,7 +10,12 @@ export default function FabGroup({
                                  }) {
     const [open, setOpen] = useState(false);
 
-    const Action = ({ label, onClick }) => (
+    const Action = ({
+                        icon,
+                        label,
+                        onClick,
+                        active = false,
+                    }) => (
         <button
             type="button"
             onClick={() => {
@@ -21,16 +26,24 @@ export default function FabGroup({
                 width: 44,
                 height: 44,
                 borderRadius: 999,
-                border: "1px solid #ddd",
-                background: "white",
+                border: active
+                    ? "2px solid #111"
+                    : "1px solid #ddd",
+                background: active
+                    ? "#f1f1f1"
+                    : "white",
                 cursor: "pointer",
-                boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
+                boxShadow: active
+                    ? "0 6px 18px rgba(0,0,0,0.22)"
+                    : "0 6px 16px rgba(0,0,0,0.12)",
                 fontSize: 18,
+                transition: "all 0.15s ease",
             }}
             aria-label={label}
+            aria-pressed={active}
             title={label}
         >
-            {label}
+            {icon}
         </button>
     );
 
@@ -55,16 +68,33 @@ export default function FabGroup({
                         gap: 10,
                     }}
                 >
-                    <Action label="✏️" onClick={onEdit} />
-                    <Action label="🏠" onClick={onHome} />
                     <Action
-                        label={isMusicOn ? "🎧" : "🔇"}
+                        icon="✏️"
+                        label="문제 수정"
+                        onClick={onEdit}
+                    />
+
+                    <Action
+                        icon="🏠"
+                        label="홈으로 이동"
+                        onClick={onHome}
+                    />
+
+                    <Action
+                        icon={isMusicOn ? "🎧" : "🔇"}
+                        label={
+                            isMusicOn
+                                ? "백색소음 정지"
+                                : "백색소음 재생"
+                        }
                         onClick={onToggleMusic}
+                        active={isMusicOn}
                     />
 
                     {showScratchpadAction && (
                         <Action
-                            label="📝"
+                            icon="📝"
+                            label="임시 답안 연습장 열기"
                             onClick={onShowScratchpad}
                         />
                     )}
@@ -85,8 +115,9 @@ export default function FabGroup({
                     boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
                     fontSize: 18,
                 }}
-                aria-label="퀴즈 메뉴"
-                title="퀴즈 메뉴"
+                aria-label={open ? "퀴즈 메뉴 닫기" : "퀴즈 메뉴 열기"}
+                aria-expanded={open}
+                title={open ? "퀴즈 메뉴 닫기" : "퀴즈 메뉴 열기"}
             >
                 {open ? "×" : "≡"}
             </button>
