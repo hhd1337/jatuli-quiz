@@ -1142,32 +1142,6 @@ export default function QuizPlayPage() {
         setFocusRemainingSeconds(nextMinutes * 60);
     };
 
-    const handleClearScratchpad = () => {
-        if (currentProblemId == null) {
-            return;
-        }
-
-        if (!currentScratchpadDraft) {
-            return;
-        }
-
-        const shouldClear = window.confirm(
-            "현재 문제에 작성한 답안을 지울까요?"
-        );
-
-        if (!shouldClear) {
-            return;
-        }
-
-        const problemKey = String(currentProblemId);
-
-        setScratchpadDrafts((prev) => {
-            const next = { ...prev };
-            delete next[problemKey];
-            return next;
-        });
-    };
-
     const handleHideScratchpad = () => {
         if (isFocusActive) {
             const shouldStopAndHide = window.confirm(
@@ -1779,7 +1753,6 @@ export default function QuizPlayPage() {
                 <AnswerScratchpad
                     value={currentScratchpadDraft}
                     onChange={handleScratchpadChange}
-                    onClear={handleClearScratchpad}
                     onHide={handleHideScratchpad}
                     isFocusActive={isFocusActive}
                     focusDurationMinutes={focusDurationMinutes}
@@ -2043,7 +2016,6 @@ export default function QuizPlayPage() {
 function AnswerScratchpad({
                               value,
                               onChange,
-                              onClear,
                               onHide,
                               isFocusActive,
                               focusDurationMinutes,
@@ -2155,17 +2127,6 @@ function AnswerScratchpad({
                     >
                         숨기기
                     </button>
-
-                    {/*<button*/}
-                    {/*    type="button"*/}
-                    {/*    style={{*/}
-                    {/*        ...getButtonStyle(false, "small"),*/}
-                    {/*        color: "#fca5a5",*/}
-                    {/*    }}*/}
-                    {/*    onClick={onClear}*/}
-                    {/*>*/}
-                    {/*    지우기*/}
-                    {/*</button>*/}
                 </div>
             </div>
 
