@@ -1,6 +1,9 @@
 import { Outlet } from "react-router-dom";
+import useBackgroundAudio from "../features/fab/useBackgroundAudio.js";
 
 export default function AppShell() {
+    const backgroundAudio = useBackgroundAudio();
+
     return (
         <div
             style={{
@@ -14,7 +17,7 @@ export default function AppShell() {
                 overflowX: "hidden",
             }}
         >
-            <Outlet />
+            <Outlet context={backgroundAudio} />
         </div>
     );
 }

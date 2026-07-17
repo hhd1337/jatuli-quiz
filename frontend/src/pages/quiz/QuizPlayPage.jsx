@@ -1,9 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
+
 import Lottie from "lottie-react";
 import successLottie from "../../assets/lottie/success1.json";
 // import successLottie from "../../assets/lottie/success2.json";
 
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import {
+    useLocation,
+    useNavigate,
+    useOutletContext,
+    useSearchParams,
+} from "react-router-dom";
+
 import { getFolderPractice } from "../../shared/api/folderApi";
 import {
     getBookmarkedPractice,
@@ -671,6 +683,13 @@ export default function QuizPlayPage() {
     const location = useLocation();
     const [searchParams] = useSearchParams();
 
+    const {
+        isMusicOn,
+        toggleMusic,
+        duckBackgroundAudio,
+        restoreBackgroundAudio,
+    } = useOutletContext();
+
     const folderId = searchParams.get("folderId");
     const mode = searchParams.get("mode");
 
@@ -694,7 +713,6 @@ export default function QuizPlayPage() {
 
     const initialTitlePath = location.state?.titlePath ?? "";
 
-    const [isMusicOn, setIsMusicOn] = useState(false);
     const [localProblems, setLocalProblems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -731,6 +749,7 @@ export default function QuizPlayPage() {
     const nextSplashTimerRef = useRef(null);
 
     const [isSpeaking, setIsSpeaking] = useState(false);
+    const speechSessionIdRef = useRef(0);
 
     const [questionStartedAt, setQuestionStartedAt] = useState(Date.now());
     const [submitting, setSubmitting] = useState(false);
@@ -747,6 +766,18 @@ export default function QuizPlayPage() {
         seconds: "0",
     });
     const [timeAdjustError, setTimeAdjustError] = useState("");
+
+    const stopAnswerSpeech = useCallback(() => {
+        // 이전 음성 세션의 이벤트를 무효화한다.
+        speechSessionIdRef.current += 1;
+
+        if ("speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+        }
+
+        setIsSpeaking(false);
+        restoreBackgroundAudio();
+    }, [restoreBackgroundAudio]);
 
     const problems = localProblems;
 
@@ -990,20 +1021,21 @@ export default function QuizPlayPage() {
             setBookmarkError("");
             setTimeAdjustError("");
 
-            if ("speechSynthesis" in window) {
-                window.speechSynthesis.cancel();
-                setIsSpeaking(false);
-            }
+            stopAnswerSpeech();
         }
-    }, [currentIndex, loading, problems.length, showCompleteScreen]);
+    }, [
+        currentIndex,
+        loading,
+        problems.length,
+        showCompleteScreen,
+        stopAnswerSpeech,
+    ]);
 
     useEffect(() => {
         return () => {
-            if ("speechSynthesis" in window) {
-                window.speechSynthesis.cancel();
-            }
+            stopAnswerSpeech();
         };
-    }, []);
+    }, [stopAnswerSpeech]);
 
     useEffect(() => {
         return () => {
@@ -1184,6 +1216,7 @@ export default function QuizPlayPage() {
     };
 
     const handleExit = () => {
+        stopAnswerSpeech();
         navigate("/");
     };
 
@@ -1212,6 +1245,7 @@ export default function QuizPlayPage() {
     };
 
     const goNext = () => {
+        stopAnswerSpeech();
         resetFocusSession();
 
         const next = currentIndex + 1;
@@ -1245,6 +1279,7 @@ export default function QuizPlayPage() {
     };
 
     const goNextWithSplash = () => {
+        stopAnswerSpeech();
         resetFocusSession();
 
         if (nextSplashTimerRef.current) {
@@ -1261,6 +1296,8 @@ export default function QuizPlayPage() {
     };
 
     const goPrev = () => {
+        stopAnswerSpeech();
+
         const prev = currentIndex - 1;
 
         if (prev < 0) {
@@ -1331,8 +1368,11 @@ export default function QuizPlayPage() {
     const goEdit = () => {
         const problem = problems[currentIndex];
 
-        if (!problem?.problemId) return;
+        if (!problem?.problemId) {
+            return;
+        }
 
+        stopAnswerSpeech();
         navigate(`/quiz/${problem.problemId}/edit`);
     };
 
@@ -1484,43 +1524,86 @@ export default function QuizPlayPage() {
 
     const handleSpeakAnswer = () => {
         if (!("speechSynthesis" in window)) {
-            setSubmissionError("현재 브라우저에서는 음성 읽기를 지원하지 않습니다.");
+            setSubmissionError(
+                "현재 브라우저에서는 음성 읽기를 지원하지 않습니다."
+            );
             return;
         }
 
+        // 읽기 중 버튼을 다시 누르면 음성을 중지하고
+        // 백색소음을 원래 볼륨으로 복구한다.
         if (isSpeaking) {
-            window.speechSynthesis.cancel();
-            setIsSpeaking(false);
+            stopAnswerSpeech();
             return;
         }
 
-        const speechText = buildAnswerSpeechText(problem);
+        const currentProblem = problems[currentIndex];
+        const speechText = buildAnswerSpeechText(currentProblem);
 
         if (!speechText) {
-            setSubmissionError("읽을 정답 또는 해설이 없습니다.");
+            setSubmissionError(
+                "읽을 정답 또는 해설이 없습니다."
+            );
             return;
         }
 
+        setSubmissionError("");
         setShowAnswer(true);
 
-        const utterance = new SpeechSynthesisUtterance(speechText);
+        // 기존 음성의 지연 이벤트와 새 음성을 구분한다.
+        const currentSpeechSessionId =
+            speechSessionIdRef.current + 1;
+
+        speechSessionIdRef.current =
+            currentSpeechSessionId;
+
+        // 혹시 브라우저에 남아 있는 이전 음성을 제거한다.
+        window.speechSynthesis.cancel();
+
+        // 정답 읽기 시작 전에 백색소음 볼륨을 낮춘다.
+        duckBackgroundAudio();
+
+        const utterance =
+            new SpeechSynthesisUtterance(speechText);
 
         utterance.lang = "ko-KR";
         utterance.rate = 0.95;
-        utterance.pitch = 0.9; //음성 높낮이
+        utterance.pitch = 0.9;
         utterance.volume = 1;
 
-        utterance.onend = () => {
+        const finishSpeech = () => {
+            // 이미 다른 음성이 시작되었거나 중지된 경우
+            // 과거 이벤트는 무시한다.
+            if (
+                speechSessionIdRef.current !==
+                currentSpeechSessionId
+            ) {
+                return;
+            }
+
+            // 같은 종료 이벤트가 여러 번 처리되지 않도록
+            // 현재 세션도 무효화한다.
+            speechSessionIdRef.current += 1;
+
             setIsSpeaking(false);
+            restoreBackgroundAudio();
         };
 
-        utterance.onerror = () => {
-            setIsSpeaking(false);
-        };
+        utterance.onend = finishSpeech;
+        utterance.onerror = finishSpeech;
 
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utterance);
-        setIsSpeaking(true);
+        try {
+            window.speechSynthesis.speak(utterance);
+            setIsSpeaking(true);
+        } catch (error) {
+            console.error("정답 음성 읽기 실패:", error);
+
+            setSubmissionError(
+                "정답 또는 해설을 읽지 못했습니다."
+            );
+
+            finishSpeech();
+        }
     };
 
     const handleTimeAdjustSubmit = async () => {
@@ -1980,8 +2063,8 @@ export default function QuizPlayPage() {
             <div onClick={(e) => e.stopPropagation()}>
                 <FabGroup
                     onEdit={goEdit}
-                    onHome={() => navigate("/")}
-                    onToggleMusic={() => setIsMusicOn((v) => !v)}
+                    onHome={handleExit}
+                    onToggleMusic={toggleMusic}
                     isMusicOn={isMusicOn}
                     onShowScratchpad={handleShowScratchpad}
                     showScratchpadAction={!isScratchpadVisible}

@@ -1,29 +1,57 @@
 import { createBrowserRouter } from "react-router-dom";
-import AppShell from "./AppShell";
-import LoginPage from "../pages/auth/LoginPage";
 
-import HomePage from "../pages/home/HomePage";
-import QuizPlayPage from "../pages/quiz/QuizPlayPage";
-import QuizEditPage from "../pages/quiz/QuizEditPage";
-import RoutinePage from "../pages/routine/RoutinePage";
-import NotFoundPage from "../pages/error/NotFoundPage";
-import HealthCheckPage from "../pages/test/HealthCheckPage";
-import MentorPlanPage from "../pages/mentor/MentorPlanPage";
-import DailyReviewPage from "../pages/mentor/DailyReviewPage";
+import AppShell from "./AppShell.jsx";
+
+import LoginPage from "../pages/auth/LoginPage.jsx";
+import HomePage from "../pages/home/HomePage.jsx";
+import QuizPlayPage from "../pages/quiz/QuizPlayPage.jsx";
+import QuizEditPage from "../pages/quiz/QuizEditPage.jsx";
+import RoutinePage from "../pages/routine/RoutinePage.jsx";
+import NotFoundPage from "../pages/error/NotFoundPage.jsx";
+import HealthCheckPage from "../pages/test/HealthCheckPage.jsx";
+import MentorPlanPage from "../pages/mentor/MentorPlanPage.jsx";
+import DailyReviewPage from "../pages/mentor/DailyReviewPage.jsx";
 
 export const router = createBrowserRouter([
     {
         element: <AppShell />,
         children: [
-            { path: "/", element: <HomePage /> },
-            { path: "/quiz/play", element: <QuizPlayPage /> },
-            { path: "/quiz/:quizId/edit", element: <QuizEditPage /> },
-            { path: "/routine", element: <RoutinePage /> },
-            { path: "/mentor/plans", element: <MentorPlanPage /> },
-            { path: "/mentor/daily-review", element: <DailyReviewPage /> },
-            { path: "/test/health", element: <HealthCheckPage /> },
-            { path: "/login", element: <LoginPage /> },
-            { path: "*", element: <NotFoundPage /> },
+            {
+                path: "/",
+                element: <HomePage />,
+            },
+            {
+                path: "/quiz/play",
+                element: <QuizPlayPage />,
+            },
+            {
+                path: "/quiz/:quizId/edit",
+                element: <QuizEditPage />,
+            },
+            {
+                path: "/routine",
+                element: <RoutinePage />,
+            },
+            {
+                path: "/mentor/plans",
+                element: <MentorPlanPage />,
+            },
+            {
+                path: "/mentor/daily-review",
+                element: <DailyReviewPage />,
+            },
+            {
+                path: "/test/health",
+                element: <HealthCheckPage />,
+            },
+            {
+                path: "/login",
+                element: <LoginPage />,
+            },
+            {
+                path: "*",
+                element: <NotFoundPage />,
+            },
         ],
     },
 ]);
