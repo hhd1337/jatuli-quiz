@@ -16,7 +16,12 @@ import MarkdownContent from "../../shared/components/MarkdownContent";
 
 const TEN_MINUTES_IN_SECONDS = 10 * 60;
 
-const FIVE_MINUTES_IN_SECONDS = 5 * 60;
+const DEFAULT_FOCUS_MINUTES = 5;
+const MIN_FOCUS_MINUTES = 1;
+const MAX_FOCUS_MINUTES = 10;
+
+const SCRATCHPAD_FOCUS_MINUTES_STORAGE_KEY =
+    "jatuli:quiz:scratchpad-focus-minutes:v1";
 
 const SCRATCHPAD_DRAFTS_STORAGE_KEY =
     "jatuli:quiz:scratchpad-drafts:v1";
@@ -179,6 +184,31 @@ function readScratchpadVisible() {
     }
 
     return savedValue === "true";
+}
+
+function readScratchpadFocusMinutes() {
+    if (typeof window === "undefined") {
+        return DEFAULT_FOCUS_MINUTES;
+    }
+
+    const savedValue = window.localStorage.getItem(
+        SCRATCHPAD_FOCUS_MINUTES_STORAGE_KEY
+    );
+
+    const parsedMinutes = Number(savedValue);
+
+    if (!Number.isInteger(parsedMinutes)) {
+        return DEFAULT_FOCUS_MINUTES;
+    }
+
+    if (
+        parsedMinutes < MIN_FOCUS_MINUTES ||
+        parsedMinutes > MAX_FOCUS_MINUTES
+    ) {
+        return DEFAULT_FOCUS_MINUTES;
+    }
+
+    return parsedMinutes;
 }
 
 function formatCountdown(totalSeconds) {
@@ -682,10 +712,16 @@ export default function QuizPlayPage() {
         readScratchpadDrafts
     );
 
+    const [focusDurationMinutes, setFocusDurationMinutes] = useState(
+        readScratchpadFocusMinutes
+    );
+
+    const focusDurationSeconds = focusDurationMinutes * 60;
+
     const [isFocusActive, setIsFocusActive] = useState(false);
     const [focusEndsAt, setFocusEndsAt] = useState(null);
     const [focusRemainingSeconds, setFocusRemainingSeconds] = useState(
-        FIVE_MINUTES_IN_SECONDS
+        DEFAULT_FOCUS_MINUTES * 60
     );
 
     const [focusEndModalOpen, setFocusEndModalOpen] = useState(false);
@@ -724,7 +760,7 @@ export default function QuizPlayPage() {
     const resetFocusSession = () => {
         setIsFocusActive(false);
         setFocusEndsAt(null);
-        setFocusRemainingSeconds(FIVE_MINUTES_IN_SECONDS);
+        setFocusRemainingSeconds(focusDurationSeconds);
         setFocusEndModalOpen(false);
     };
 
@@ -772,6 +808,17 @@ export default function QuizPlayPage() {
 
         return {};
     };
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(
+                SCRATCHPAD_FOCUS_MINUTES_STORAGE_KEY,
+                String(focusDurationMinutes)
+            );
+        } catch (error) {
+            console.warn("집중 시간 설정 저장 실패:", error);
+        }
+    }, [focusDurationMinutes]);
 
     useEffect(() => {
         let ignore = false;
@@ -1073,6 +1120,28 @@ export default function QuizPlayPage() {
         });
     };
 
+    const handleFocusDurationChange = (value) => {
+        if (isFocusActive) {
+            return;
+        }
+
+        const nextMinutes = Number(value);
+
+        if (!Number.isInteger(nextMinutes)) {
+            return;
+        }
+
+        if (
+            nextMinutes < MIN_FOCUS_MINUTES ||
+            nextMinutes > MAX_FOCUS_MINUTES
+        ) {
+            return;
+        }
+
+        setFocusDurationMinutes(nextMinutes);
+        setFocusRemainingSeconds(nextMinutes * 60);
+    };
+
     const handleClearScratchpad = () => {
         if (currentProblemId == null) {
             return;
@@ -1102,7 +1171,7 @@ export default function QuizPlayPage() {
     const handleHideScratchpad = () => {
         if (isFocusActive) {
             const shouldStopAndHide = window.confirm(
-                "5분 집중을 종료하고 연습장을 숨길까요?"
+                "진행 중인 집중 타이머를 종료하고 연습장을 숨길까요?"
             );
 
             if (!shouldStopAndHide) {
@@ -1119,18 +1188,18 @@ export default function QuizPlayPage() {
         setIsScratchpadVisible(true);
     };
 
-    const handleStartFiveMinuteFocus = () => {
+    const handleStartFocus = () => {
         setFocusEndModalOpen(false);
-        setFocusRemainingSeconds(FIVE_MINUTES_IN_SECONDS);
+        setFocusRemainingSeconds(focusDurationSeconds);
         setFocusEndsAt(
-            Date.now() + FIVE_MINUTES_IN_SECONDS * 1000
+            Date.now() + focusDurationSeconds * 1000
         );
         setIsFocusActive(true);
     };
 
-    const handleStopFiveMinuteFocus = () => {
+    const handleStopFocus = () => {
         const shouldStop = window.confirm(
-            "진행 중인 5분 집중을 종료할까요?"
+            "진행 중인 집중 타이머를 종료할까요?"
         );
 
         if (!shouldStop) {
@@ -1430,11 +1499,11 @@ export default function QuizPlayPage() {
         await handleSubmitAndNextClick();
     };
 
-    const handleFocusFiveMore = () => {
+    const handleFocusMore = () => {
         setFocusEndModalOpen(false);
-        setFocusRemainingSeconds(FIVE_MINUTES_IN_SECONDS);
+        setFocusRemainingSeconds(focusDurationSeconds);
         setFocusEndsAt(
-            Date.now() + FIVE_MINUTES_IN_SECONDS * 1000
+            Date.now() + focusDurationSeconds * 1000
         );
         setIsFocusActive(true);
     };
@@ -1713,9 +1782,12 @@ export default function QuizPlayPage() {
                     onClear={handleClearScratchpad}
                     onHide={handleHideScratchpad}
                     isFocusActive={isFocusActive}
+                    focusDurationMinutes={focusDurationMinutes}
+                    focusDurationSeconds={focusDurationSeconds}
                     focusRemainingSeconds={focusRemainingSeconds}
-                    onStartFocus={handleStartFiveMinuteFocus}
-                    onStopFocus={handleStopFiveMinuteFocus}
+                    onFocusDurationChange={handleFocusDurationChange}
+                    onStartFocus={handleStartFocus}
+                    onStopFocus={handleStopFocus}
                 />
             )}
 
@@ -1884,7 +1956,7 @@ export default function QuizPlayPage() {
                 >
                     <div style={modalCardStyle}>
                         <h2 style={{ marginTop: 0 }}>
-                            5분 집중이 종료되었습니다.
+                            {focusDurationMinutes}분 집중이 종료되었습니다.
                         </h2>
 
                         <p
@@ -1895,7 +1967,7 @@ export default function QuizPlayPage() {
                             }}
                         >
                             현재 문제를 제출하고 다음 문제로 이동하거나,
-                            같은 문제에 5분 더 집중할 수 있습니다.
+                            같은 문제를 좀 더 풀 수 있습니다.
                         </p>
 
                         <div
@@ -1923,9 +1995,9 @@ export default function QuizPlayPage() {
                                     borderColor: "#ef4444",
                                     background: "#991b1b",
                                 }}
-                                onClick={handleFocusFiveMore}
+                                onClick={handleFocusMore}
                             >
-                                5분만 더
+                                {focusDurationMinutes}분만 더
                             </button>
                         </div>
                     </div>
@@ -1974,7 +2046,10 @@ function AnswerScratchpad({
                               onClear,
                               onHide,
                               isFocusActive,
+                              focusDurationMinutes,
+                              focusDurationSeconds,
                               focusRemainingSeconds,
+                              onFocusDurationChange,
                               onStartFocus,
                               onStopFocus,
                           }) {
@@ -1982,8 +2057,7 @@ function AnswerScratchpad({
         0,
         Math.min(
             100,
-            (focusRemainingSeconds / FIVE_MINUTES_IN_SECONDS) *
-            100
+            (focusRemainingSeconds / focusDurationSeconds) * 100
         )
     );
 
@@ -2018,6 +2092,44 @@ function AnswerScratchpad({
                         gap: 6,
                     }}
                 >
+                    <select
+                        value={focusDurationMinutes}
+                        onChange={(event) =>
+                            onFocusDurationChange(event.target.value)
+                        }
+                        disabled={isFocusActive}
+                        aria-label="집중 시간 선택"
+                        title="집중 시간 선택"
+                        style={{
+                            height: 35,
+                            padding: "0 7px",
+                            borderRadius: 6,
+                            border: "1px solid var(--color-border, #374151)",
+                            background: "var(--color-bg, #111827)",
+                            color: "var(--color-text, #f9fafb)",
+                            fontSize: 13,
+                            cursor: isFocusActive
+                                ? "not-allowed"
+                                : "pointer",
+                            opacity: isFocusActive ? 0.65 : 1,
+                        }}
+                    >
+                        {Array.from(
+                            {
+                                length:
+                                    MAX_FOCUS_MINUTES -
+                                    MIN_FOCUS_MINUTES +
+                                    1,
+                            },
+                            (_, index) =>
+                                MIN_FOCUS_MINUTES + index
+                        ).map((minutes) => (
+                            <option key={minutes} value={minutes}>
+                                {minutes}분
+                            </option>
+                        ))}
+                    </select>
+
                     <button
                         type="button"
                         style={{
@@ -2033,9 +2145,7 @@ function AnswerScratchpad({
                                 : onStartFocus
                         }
                     >
-                        {isFocusActive
-                            ? "집중 종료"
-                            : "5분"}
+                        {isFocusActive ? "집중 종료" : "시작"}
                     </button>
 
                     <button
@@ -2081,7 +2191,7 @@ function AnswerScratchpad({
                                 color: "#fca5a5",
                             }}
                         >
-                            5분 집중
+                            {focusDurationMinutes}분 집중
                         </span>
 
                         <strong
@@ -2101,7 +2211,7 @@ function AnswerScratchpad({
                         role="progressbar"
                         aria-label="5분 집중 남은 시간"
                         aria-valuemin={0}
-                        aria-valuemax={FIVE_MINUTES_IN_SECONDS}
+                        aria-valuemax={focusDurationSeconds}
                         aria-valuenow={focusRemainingSeconds}
                         style={focusProgressTrackStyle}
                     >
