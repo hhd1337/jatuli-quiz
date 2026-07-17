@@ -24,6 +24,116 @@ const SCRATCHPAD_DRAFTS_STORAGE_KEY =
 const SCRATCHPAD_VISIBLE_STORAGE_KEY =
     "jatuli:quiz:scratchpad-visible:v1";
 
+const SCRATCHPAD_MAX_DRAFT_COUNT = 3000;
+
+// 연습장 JSON 데이터 자체가 사용할 수 있는 최대 용량
+// 3MiB = 3,145,728 bytes
+const SCRATCHPAD_MAX_STORAGE_BYTES = 3 * 1024 * 1024;
+
+const SCRATCHPAD_SAVE_DEBOUNCE_MS = 500;
+
+const UTF8_ENCODER = new TextEncoder();
+
+function getUtf8ByteSize(value) {
+    return UTF8_ENCODER.encode(String(value ?? "")).byteLength;
+}
+
+function normalizeScratchpadDraft(rawDraft) {
+    // 기존 버전에서 문자열로 저장된 답안 호환
+    if (typeof rawDraft === "string") {
+        if (rawDraft.length === 0) {
+            return null;
+        }
+
+        return {
+            text: rawDraft,
+            updatedAt: 0,
+        };
+    }
+
+    if (
+        !rawDraft ||
+        typeof rawDraft !== "object" ||
+        Array.isArray(rawDraft)
+    ) {
+        return null;
+    }
+
+    const text =
+        typeof rawDraft.text === "string"
+            ? rawDraft.text
+            : String(rawDraft.text ?? "");
+
+    if (text.length === 0) {
+        return null;
+    }
+
+    const rawUpdatedAt = Number(rawDraft.updatedAt);
+
+    return {
+        text,
+        updatedAt: Number.isFinite(rawUpdatedAt)
+            ? rawUpdatedAt
+            : 0,
+    };
+}
+
+function pruneScratchpadDrafts(drafts) {
+    if (
+        !drafts ||
+        typeof drafts !== "object" ||
+        Array.isArray(drafts)
+    ) {
+        return {};
+    }
+
+    const sortedEntries = Object.entries(drafts)
+        .map(([problemId, rawDraft]) => {
+            return [
+                String(problemId),
+                normalizeScratchpadDraft(rawDraft),
+            ];
+        })
+        .filter(([, draft]) => draft !== null)
+        .sort(([, firstDraft], [, secondDraft]) => {
+            return (
+                Number(secondDraft.updatedAt) -
+                Number(firstDraft.updatedAt)
+            );
+        })
+        .slice(0, SCRATCHPAD_MAX_DRAFT_COUNT);
+
+    const keptEntries = [];
+
+    // 빈 JSON 객체인 {}의 크기
+    let totalBytes = getUtf8ByteSize("{}");
+
+    for (const [problemId, draft] of sortedEntries) {
+        const serializedEntry =
+            `${JSON.stringify(problemId)}:${JSON.stringify(draft)}`;
+
+        const commaBytes =
+            keptEntries.length > 0
+                ? getUtf8ByteSize(",")
+                : 0;
+
+        const entryBytes =
+            getUtf8ByteSize(serializedEntry) + commaBytes;
+
+        if (
+            totalBytes + entryBytes >
+            SCRATCHPAD_MAX_STORAGE_BYTES
+        ) {
+            break;
+        }
+
+        keptEntries.push([problemId, draft]);
+        totalBytes += entryBytes;
+    }
+
+    return Object.fromEntries(keptEntries);
+}
+
 function readScratchpadDrafts() {
     if (typeof window === "undefined") {
         return {};
@@ -48,7 +158,7 @@ function readScratchpadDrafts() {
             return {};
         }
 
-        return parsedValue;
+        return pruneScratchpadDrafts(parsedValue);
     } catch (error) {
         console.warn("연습장 임시 답안 복원 실패:", error);
         return {};
@@ -609,7 +719,7 @@ export default function QuizPlayPage() {
     const currentScratchpadDraft =
         currentProblemId == null
             ? ""
-            : scratchpadDrafts[String(currentProblemId)] ?? "";
+            : scratchpadDrafts[String(currentProblemId)]?.text ?? "";
 
     const resetFocusSession = () => {
         setIsFocusActive(false);
@@ -870,14 +980,29 @@ export default function QuizPlayPage() {
     useEffect(() => {
         const saveTimer = window.setTimeout(() => {
             try {
+                const prunedDrafts =
+                    pruneScratchpadDrafts(scratchpadDrafts);
+
+                const currentSerialized =
+                    JSON.stringify(scratchpadDrafts);
+
+                const prunedSerialized =
+                    JSON.stringify(prunedDrafts);
+
                 window.localStorage.setItem(
                     SCRATCHPAD_DRAFTS_STORAGE_KEY,
-                    JSON.stringify(scratchpadDrafts)
+                    prunedSerialized
                 );
+
+                // 개수 또는 용량 제한으로 제거된 답안이 있다면
+                // React 상태도 실제 저장 결과와 동일하게 맞춘다.
+                if (currentSerialized !== prunedSerialized) {
+                    setScratchpadDrafts(prunedDrafts);
+                }
             } catch (error) {
                 console.warn("연습장 임시 답안 저장 실패:", error);
             }
-        }, 300);
+        }, SCRATCHPAD_SAVE_DEBOUNCE_MS);
 
         return () => {
             window.clearTimeout(saveTimer);
@@ -931,10 +1056,21 @@ export default function QuizPlayPage() {
 
         const problemKey = String(currentProblemId);
 
-        setScratchpadDrafts((prev) => ({
-            ...prev,
-            [problemKey]: value,
-        }));
+        setScratchpadDrafts((prev) => {
+            const next = { ...prev };
+
+            if (value.length === 0) {
+                delete next[problemKey];
+                return next;
+            }
+
+            next[problemKey] = {
+                text: value,
+                updatedAt: Date.now(),
+            };
+
+            return next;
+        });
     };
 
     const handleClearScratchpad = () => {
