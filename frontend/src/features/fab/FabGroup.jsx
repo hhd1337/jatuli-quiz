@@ -5,13 +5,16 @@ export default function FabGroup({
                                      onHome,
                                      onToggleMusic,
                                      isMusicOn,
+                                     onShowScratchpad,
+                                     showScratchpadAction = false,
                                  }) {
     const [open, setOpen] = useState(false);
 
     const Action = ({ label, onClick }) => (
         <button
+            type="button"
             onClick={() => {
-                onClick();
+                onClick?.();
                 setOpen(false);
             }}
             style={{
@@ -22,6 +25,7 @@ export default function FabGroup({
                 background: "white",
                 cursor: "pointer",
                 boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
+                fontSize: 18,
             }}
             aria-label={label}
             title={label}
@@ -44,15 +48,32 @@ export default function FabGroup({
             }}
         >
             {open && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div
+                    style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                    }}
+                >
                     <Action label="✏️" onClick={onEdit} />
                     <Action label="🏠" onClick={onHome} />
-                    <Action label={isMusicOn ? "🎧" : "🔇"} onClick={onToggleMusic} />
+                    <Action
+                        label={isMusicOn ? "🎧" : "🔇"}
+                        onClick={onToggleMusic}
+                    />
+
+                    {showScratchpadAction && (
+                        <Action
+                            label="📝"
+                            onClick={onShowScratchpad}
+                        />
+                    )}
                 </div>
             )}
 
             <button
-                onClick={() => setOpen((v) => !v)}
+                type="button"
+                onClick={() => setOpen((value) => !value)}
                 style={{
                     width: 56,
                     height: 56,

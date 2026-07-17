@@ -16,6 +16,76 @@ import MarkdownContent from "../../shared/components/MarkdownContent";
 
 const TEN_MINUTES_IN_SECONDS = 10 * 60;
 
+const FIVE_MINUTES_IN_SECONDS = 5 * 60;
+
+const SCRATCHPAD_DRAFTS_STORAGE_KEY =
+    "jatuli:quiz:scratchpad-drafts:v1";
+
+const SCRATCHPAD_VISIBLE_STORAGE_KEY =
+    "jatuli:quiz:scratchpad-visible:v1";
+
+function readScratchpadDrafts() {
+    if (typeof window === "undefined") {
+        return {};
+    }
+
+    try {
+        const savedValue = window.localStorage.getItem(
+            SCRATCHPAD_DRAFTS_STORAGE_KEY
+        );
+
+        if (!savedValue) {
+            return {};
+        }
+
+        const parsedValue = JSON.parse(savedValue);
+
+        if (
+            !parsedValue ||
+            typeof parsedValue !== "object" ||
+            Array.isArray(parsedValue)
+        ) {
+            return {};
+        }
+
+        return parsedValue;
+    } catch (error) {
+        console.warn("연습장 임시 답안 복원 실패:", error);
+        return {};
+    }
+}
+
+function readScratchpadVisible() {
+    if (typeof window === "undefined") {
+        return true;
+    }
+
+    const savedValue = window.localStorage.getItem(
+        SCRATCHPAD_VISIBLE_STORAGE_KEY
+    );
+
+    if (savedValue === null) {
+        return true;
+    }
+
+    return savedValue === "true";
+}
+
+function formatCountdown(totalSeconds) {
+    const safeSeconds = Math.max(
+        0,
+        Math.floor(Number(totalSeconds) || 0)
+    );
+
+    const minutes = Math.floor(safeSeconds / 60);
+    const seconds = safeSeconds % 60;
+
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
+        2,
+        "0"
+    )}`;
+}
+
 const pageStyle = {
     width: "100%",
     maxWidth: 800,
@@ -45,6 +115,53 @@ const answerCardStyle = {
     borderRadius: 12,
     padding: "clamp(14px, 3.5vw, 16px)",
     marginBottom: 16,
+};
+
+const scratchpadCardStyle = {
+    width: "100%",
+    boxSizing: "border-box",
+    border: "1px solid var(--color-border, #374151)",
+    background: "var(--color-surface, #1f2937)",
+    color: "var(--color-text, #f9fafb)",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+};
+
+const scratchpadTextareaStyle = {
+    width: "100%",
+    minHeight: 240,
+    boxSizing: "border-box",
+    padding: 14,
+    marginTop: 14,
+    border: "1px solid var(--color-border, #374151)",
+    borderRadius: 8,
+    background: "var(--color-bg, #111827)",
+    color: "var(--color-text, #f9fafb)",
+    fontSize: 15,
+    lineHeight: 1.6,
+    resize: "vertical",
+    outline: "none",
+};
+
+const focusProgressTrackStyle = {
+    width: "100%",
+    height: 12,
+    overflow: "hidden",
+    borderRadius: 999,
+    background: "rgba(127, 29, 29, 0.3)",
+    border: "1px solid rgba(248, 113, 113, 0.45)",
+};
+
+const focusEndModalOverlayStyle = {
+    position: "fixed",
+    inset: 0,
+    zIndex: 1500,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "rgba(0, 0, 0, 0.68)",
 };
 
 const titleParentPathStyle = {
@@ -447,6 +564,22 @@ export default function QuizPlayPage() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
 
+    const [isScratchpadVisible, setIsScratchpadVisible] = useState(
+        readScratchpadVisible
+    );
+
+    const [scratchpadDrafts, setScratchpadDrafts] = useState(
+        readScratchpadDrafts
+    );
+
+    const [isFocusActive, setIsFocusActive] = useState(false);
+    const [focusEndsAt, setFocusEndsAt] = useState(null);
+    const [focusRemainingSeconds, setFocusRemainingSeconds] = useState(
+        FIVE_MINUTES_IN_SECONDS
+    );
+
+    const [focusEndModalOpen, setFocusEndModalOpen] = useState(false);
+
     const [nextSplashOpen, setNextSplashOpen] = useState(false);
     const [splashMessage, setSplashMessage] = useState("좋아요!");
     const nextSplashTimerRef = useRef(null);
@@ -470,6 +603,20 @@ export default function QuizPlayPage() {
     const [timeAdjustError, setTimeAdjustError] = useState("");
 
     const problems = localProblems;
+
+    const currentProblemId = problems[currentIndex]?.problemId;
+
+    const currentScratchpadDraft =
+        currentProblemId == null
+            ? ""
+            : scratchpadDrafts[String(currentProblemId)] ?? "";
+
+    const resetFocusSession = () => {
+        setIsFocusActive(false);
+        setFocusEndsAt(null);
+        setFocusRemainingSeconds(FIVE_MINUTES_IN_SECONDS);
+        setFocusEndModalOpen(false);
+    };
 
     const resolveFolderStartIndex = async (targetFolderId, fetchedProblems) => {
         if (!targetFolderId || fetchedProblems.length === 0) {
@@ -709,6 +856,154 @@ export default function QuizPlayPage() {
         };
     }, []);
 
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(
+                SCRATCHPAD_VISIBLE_STORAGE_KEY,
+                String(isScratchpadVisible)
+            );
+        } catch (error) {
+            console.warn("연습장 표시 상태 저장 실패:", error);
+        }
+    }, [isScratchpadVisible]);
+
+    useEffect(() => {
+        const saveTimer = window.setTimeout(() => {
+            try {
+                window.localStorage.setItem(
+                    SCRATCHPAD_DRAFTS_STORAGE_KEY,
+                    JSON.stringify(scratchpadDrafts)
+                );
+            } catch (error) {
+                console.warn("연습장 임시 답안 저장 실패:", error);
+            }
+        }, 300);
+
+        return () => {
+            window.clearTimeout(saveTimer);
+        };
+    }, [scratchpadDrafts]);
+
+    useEffect(() => {
+        resetFocusSession();
+    }, [currentProblemId]);
+
+    useEffect(() => {
+        if (!isFocusActive || focusEndsAt == null) {
+            return undefined;
+        }
+
+        const updateRemainingTime = () => {
+            const remainingSeconds = Math.max(
+                0,
+                Math.ceil((focusEndsAt - Date.now()) / 1000)
+            );
+
+            setFocusRemainingSeconds(remainingSeconds);
+
+            if (remainingSeconds === 0) {
+                setIsFocusActive(false);
+                setFocusEndsAt(null);
+                setFocusEndModalOpen(true);
+
+                if (document.activeElement instanceof HTMLElement) {
+                    document.activeElement.blur();
+                }
+            }
+        };
+
+        updateRemainingTime();
+
+        const intervalId = window.setInterval(
+            updateRemainingTime,
+            250
+        );
+
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [isFocusActive, focusEndsAt]);
+
+    const handleScratchpadChange = (value) => {
+        if (currentProblemId == null) {
+            return;
+        }
+
+        const problemKey = String(currentProblemId);
+
+        setScratchpadDrafts((prev) => ({
+            ...prev,
+            [problemKey]: value,
+        }));
+    };
+
+    const handleClearScratchpad = () => {
+        if (currentProblemId == null) {
+            return;
+        }
+
+        if (!currentScratchpadDraft) {
+            return;
+        }
+
+        const shouldClear = window.confirm(
+            "현재 문제에 작성한 답안을 지울까요?"
+        );
+
+        if (!shouldClear) {
+            return;
+        }
+
+        const problemKey = String(currentProblemId);
+
+        setScratchpadDrafts((prev) => {
+            const next = { ...prev };
+            delete next[problemKey];
+            return next;
+        });
+    };
+
+    const handleHideScratchpad = () => {
+        if (isFocusActive) {
+            const shouldStopAndHide = window.confirm(
+                "5분 집중을 종료하고 연습장을 숨길까요?"
+            );
+
+            if (!shouldStopAndHide) {
+                return;
+            }
+
+            resetFocusSession();
+        }
+
+        setIsScratchpadVisible(false);
+    };
+
+    const handleShowScratchpad = () => {
+        setIsScratchpadVisible(true);
+    };
+
+    const handleStartFiveMinuteFocus = () => {
+        setFocusEndModalOpen(false);
+        setFocusRemainingSeconds(FIVE_MINUTES_IN_SECONDS);
+        setFocusEndsAt(
+            Date.now() + FIVE_MINUTES_IN_SECONDS * 1000
+        );
+        setIsFocusActive(true);
+    };
+
+    const handleStopFiveMinuteFocus = () => {
+        const shouldStop = window.confirm(
+            "진행 중인 5분 집중을 종료할까요?"
+        );
+
+        if (!shouldStop) {
+            return;
+        }
+
+        resetFocusSession();
+    };
+
     const handleExit = () => {
         navigate("/");
     };
@@ -738,6 +1033,8 @@ export default function QuizPlayPage() {
     };
 
     const goNext = () => {
+        resetFocusSession();
+
         const next = currentIndex + 1;
 
         if (next >= problems.length) {
@@ -769,6 +1066,8 @@ export default function QuizPlayPage() {
     };
 
     const goNextWithSplash = () => {
+        resetFocusSession();
+
         if (nextSplashTimerRef.current) {
             clearTimeout(nextSplashTimerRef.current);
         }
@@ -789,6 +1088,7 @@ export default function QuizPlayPage() {
             return;
         }
 
+        resetFocusSession();
         setCurrentIndex(prev);
         setShowAnswer(false);
     };
@@ -939,9 +1239,26 @@ export default function QuizPlayPage() {
         setTimeAdjustError("");
     };
 
-    const toggleAnswerByPageClick = () => {
+    const toggleAnswerByPageClick = (event) => {
         if (submitting) return;
         if (timeAdjustModal.open) return;
+        if (focusEndModalOpen) return;
+        if (nextSplashOpen) return;
+
+        const blockedElement = event.target?.closest?.(
+            [
+                "button",
+                "textarea",
+                "input",
+                "select",
+                "a",
+                "[data-prevent-answer-toggle]",
+            ].join(", ")
+        );
+
+        if (blockedElement) {
+            return;
+        }
 
         setShowAnswer((prev) => !prev);
     };
@@ -970,6 +1287,20 @@ export default function QuizPlayPage() {
         }
 
         await submitCurrentProblemAndGoNext(elapsedSeconds);
+    };
+
+    const handleFocusSubmitAndNext = async () => {
+        setFocusEndModalOpen(false);
+        await handleSubmitAndNextClick();
+    };
+
+    const handleFocusFiveMore = () => {
+        setFocusEndModalOpen(false);
+        setFocusRemainingSeconds(FIVE_MINUTES_IN_SECONDS);
+        setFocusEndsAt(
+            Date.now() + FIVE_MINUTES_IN_SECONDS * 1000
+        );
+        setIsFocusActive(true);
     };
 
     const handleSpeakAnswer = () => {
@@ -1198,7 +1529,10 @@ export default function QuizPlayPage() {
             )}
 
             {showAnswer && (
-                <div>
+                <div
+                    data-prevent-answer-toggle
+                    onClick={(event) => event.stopPropagation()}
+                >
                     <div style={answerCardStyle}>
                         <div style={{ marginBottom: 20 }}>
                             <div style={{ marginBottom: 6, fontWeight: 600 }}>해설</div>
@@ -1234,6 +1568,19 @@ export default function QuizPlayPage() {
                         </button>
                     </div>
                 </div>
+            )}
+
+            {isScratchpadVisible && (
+                <AnswerScratchpad
+                    value={currentScratchpadDraft}
+                    onChange={handleScratchpadChange}
+                    onClear={handleClearScratchpad}
+                    onHide={handleHideScratchpad}
+                    isFocusActive={isFocusActive}
+                    focusRemainingSeconds={focusRemainingSeconds}
+                    onStartFocus={handleStartFiveMinuteFocus}
+                    onStopFocus={handleStopFiveMinuteFocus}
+                />
             )}
 
             {submissionError && (
@@ -1393,12 +1740,70 @@ export default function QuizPlayPage() {
                 </div>
             )}
 
+            {focusEndModalOpen && (
+                <div
+                    data-prevent-answer-toggle
+                    onClick={(event) => event.stopPropagation()}
+                    style={focusEndModalOverlayStyle}
+                >
+                    <div style={modalCardStyle}>
+                        <h2 style={{ marginTop: 0 }}>
+                            5분 집중이 종료되었습니다.
+                        </h2>
+
+                        <p
+                            style={{
+                                marginBottom: 24,
+                                lineHeight: 1.6,
+                                color: "var(--color-text-muted, #9ca3af)",
+                            }}
+                        >
+                            현재 문제를 제출하고 다음 문제로 이동하거나,
+                            같은 문제에 5분 더 집중할 수 있습니다.
+                        </p>
+
+                        <div
+                            style={{
+                                display: "flex",
+                                justifyContent: "flex-end",
+                                gap: 8,
+                            }}
+                        >
+                            <button
+                                type="button"
+                                style={getButtonStyle(submitting)}
+                                onClick={handleFocusSubmitAndNext}
+                                disabled={submitting}
+                            >
+                                {submitting
+                                    ? "제출 중..."
+                                    : "제출 후 다음"}
+                            </button>
+
+                            <button
+                                type="button"
+                                style={{
+                                    ...getButtonStyle(false),
+                                    borderColor: "#ef4444",
+                                    background: "#991b1b",
+                                }}
+                                onClick={handleFocusFiveMore}
+                            >
+                                5분만 더
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div onClick={(e) => e.stopPropagation()}>
                 <FabGroup
                     onEdit={goEdit}
                     onHome={() => navigate("/")}
                     onToggleMusic={() => setIsMusicOn((v) => !v)}
                     isMusicOn={isMusicOn}
+                    onShowScratchpad={handleShowScratchpad}
+                    showScratchpadAction={!isScratchpadVisible}
                 />
             </div>
 
@@ -1424,6 +1829,168 @@ export default function QuizPlayPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+function AnswerScratchpad({
+                              value,
+                              onChange,
+                              onClear,
+                              onHide,
+                              isFocusActive,
+                              focusRemainingSeconds,
+                              onStartFocus,
+                              onStopFocus,
+                          }) {
+    const progressPercent = Math.max(
+        0,
+        Math.min(
+            100,
+            (focusRemainingSeconds / FIVE_MINUTES_IN_SECONDS) *
+            100
+        )
+    );
+
+    return (
+        <section
+            data-prevent-answer-toggle
+            onClick={(event) => event.stopPropagation()}
+            style={scratchpadCardStyle}
+        >
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 16,
+                }}
+            >
+                <h2
+                    style={{
+                        margin: 0,
+                        fontSize: 17,
+                        lineHeight: 1.3,
+                    }}
+                >
+                    연습장
+                </h2>
+
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                    }}
+                >
+                    <button
+                        type="button"
+                        style={{
+                            ...getButtonStyle(false, "small"),
+                            borderColor: "#ef4444",
+                            background: isFocusActive
+                                ? "#7f1d1d"
+                                : "#991b1b",
+                        }}
+                        onClick={
+                            isFocusActive
+                                ? onStopFocus
+                                : onStartFocus
+                        }
+                    >
+                        {isFocusActive
+                            ? "집중 종료"
+                            : "5분"}
+                    </button>
+
+                    <button
+                        type="button"
+                        style={getButtonStyle(false, "small")}
+                        onClick={onHide}
+                    >
+                        숨기기
+                    </button>
+
+                    {/*<button*/}
+                    {/*    type="button"*/}
+                    {/*    style={{*/}
+                    {/*        ...getButtonStyle(false, "small"),*/}
+                    {/*        color: "#fca5a5",*/}
+                    {/*    }}*/}
+                    {/*    onClick={onClear}*/}
+                    {/*>*/}
+                    {/*    지우기*/}
+                    {/*</button>*/}
+                </div>
+            </div>
+
+            {isFocusActive && (
+                <div
+                    style={{
+                        marginTop: 16,
+                        marginBottom: 4,
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: 8,
+                        }}
+                    >
+                        <span
+                            style={{
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: "#fca5a5",
+                            }}
+                        >
+                            5분 집중
+                        </span>
+
+                        <strong
+                            style={{
+                                fontSize: 18,
+                                fontVariantNumeric: "tabular-nums",
+                                color: "#f87171",
+                            }}
+                        >
+                            {formatCountdown(
+                                focusRemainingSeconds
+                            )}
+                        </strong>
+                    </div>
+
+                    <div
+                        role="progressbar"
+                        aria-label="5분 집중 남은 시간"
+                        aria-valuemin={0}
+                        aria-valuemax={FIVE_MINUTES_IN_SECONDS}
+                        aria-valuenow={focusRemainingSeconds}
+                        style={focusProgressTrackStyle}
+                    >
+                        <div
+                            style={{
+                                width: `${progressPercent}%`,
+                                height: "100%",
+                                borderRadius: 999,
+                                background: "#ef4444",
+                                transition: "width 0.25s linear",
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+
+            <textarea
+                value={value}
+                onChange={(event) =>
+                    onChange(event.target.value)
+                }
+                placeholder="문제를 보고 생각한 내용을 자유롭게 작성하세요."
+                style={scratchpadTextareaStyle}
+            />
+        </section>
     );
 }
 
