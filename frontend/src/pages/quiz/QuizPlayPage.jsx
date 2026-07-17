@@ -16,6 +16,216 @@ import MarkdownContent from "../../shared/components/MarkdownContent";
 
 const TEN_MINUTES_IN_SECONDS = 10 * 60;
 
+const DEFAULT_FOCUS_MINUTES = 5;
+const MIN_FOCUS_MINUTES = 1;
+const MAX_FOCUS_MINUTES = 10;
+
+const SCRATCHPAD_FOCUS_MINUTES_STORAGE_KEY =
+    "jatuli:quiz:scratchpad-focus-minutes:v1";
+
+const SCRATCHPAD_DRAFTS_STORAGE_KEY =
+    "jatuli:quiz:scratchpad-drafts:v1";
+
+const SCRATCHPAD_VISIBLE_STORAGE_KEY =
+    "jatuli:quiz:scratchpad-visible:v1";
+
+const SCRATCHPAD_MAX_DRAFT_COUNT = 3000;
+
+// 연습장 JSON 데이터 자체가 사용할 수 있는 최대 용량
+// 3MiB = 3,145,728 bytes
+const SCRATCHPAD_MAX_STORAGE_BYTES = 3 * 1024 * 1024;
+
+const SCRATCHPAD_SAVE_DEBOUNCE_MS = 500;
+
+const UTF8_ENCODER = new TextEncoder();
+
+function getUtf8ByteSize(value) {
+    return UTF8_ENCODER.encode(String(value ?? "")).byteLength;
+}
+
+function normalizeScratchpadDraft(rawDraft) {
+    // 기존 버전에서 문자열로 저장된 답안 호환
+    if (typeof rawDraft === "string") {
+        if (rawDraft.length === 0) {
+            return null;
+        }
+
+        return {
+            text: rawDraft,
+            updatedAt: 0,
+        };
+    }
+
+    if (
+        !rawDraft ||
+        typeof rawDraft !== "object" ||
+        Array.isArray(rawDraft)
+    ) {
+        return null;
+    }
+
+    const text =
+        typeof rawDraft.text === "string"
+            ? rawDraft.text
+            : String(rawDraft.text ?? "");
+
+    if (text.length === 0) {
+        return null;
+    }
+
+    const rawUpdatedAt = Number(rawDraft.updatedAt);
+
+    return {
+        text,
+        updatedAt: Number.isFinite(rawUpdatedAt)
+            ? rawUpdatedAt
+            : 0,
+    };
+}
+
+function pruneScratchpadDrafts(drafts) {
+    if (
+        !drafts ||
+        typeof drafts !== "object" ||
+        Array.isArray(drafts)
+    ) {
+        return {};
+    }
+
+    const sortedEntries = Object.entries(drafts)
+        .map(([problemId, rawDraft]) => {
+            return [
+                String(problemId),
+                normalizeScratchpadDraft(rawDraft),
+            ];
+        })
+        .filter(([, draft]) => draft !== null)
+        .sort(([, firstDraft], [, secondDraft]) => {
+            return (
+                Number(secondDraft.updatedAt) -
+                Number(firstDraft.updatedAt)
+            );
+        })
+        .slice(0, SCRATCHPAD_MAX_DRAFT_COUNT);
+
+    const keptEntries = [];
+
+    // 빈 JSON 객체인 {}의 크기
+    let totalBytes = getUtf8ByteSize("{}");
+
+    for (const [problemId, draft] of sortedEntries) {
+        const serializedEntry =
+            `${JSON.stringify(problemId)}:${JSON.stringify(draft)}`;
+
+        const commaBytes =
+            keptEntries.length > 0
+                ? getUtf8ByteSize(",")
+                : 0;
+
+        const entryBytes =
+            getUtf8ByteSize(serializedEntry) + commaBytes;
+
+        if (
+            totalBytes + entryBytes >
+            SCRATCHPAD_MAX_STORAGE_BYTES
+        ) {
+            break;
+        }
+
+        keptEntries.push([problemId, draft]);
+        totalBytes += entryBytes;
+    }
+
+    return Object.fromEntries(keptEntries);
+}
+
+function readScratchpadDrafts() {
+    if (typeof window === "undefined") {
+        return {};
+    }
+
+    try {
+        const savedValue = window.localStorage.getItem(
+            SCRATCHPAD_DRAFTS_STORAGE_KEY
+        );
+
+        if (!savedValue) {
+            return {};
+        }
+
+        const parsedValue = JSON.parse(savedValue);
+
+        if (
+            !parsedValue ||
+            typeof parsedValue !== "object" ||
+            Array.isArray(parsedValue)
+        ) {
+            return {};
+        }
+
+        return pruneScratchpadDrafts(parsedValue);
+    } catch (error) {
+        console.warn("연습장 임시 답안 복원 실패:", error);
+        return {};
+    }
+}
+
+function readScratchpadVisible() {
+    if (typeof window === "undefined") {
+        return true;
+    }
+
+    const savedValue = window.localStorage.getItem(
+        SCRATCHPAD_VISIBLE_STORAGE_KEY
+    );
+
+    if (savedValue === null) {
+        return true;
+    }
+
+    return savedValue === "true";
+}
+
+function readScratchpadFocusMinutes() {
+    if (typeof window === "undefined") {
+        return DEFAULT_FOCUS_MINUTES;
+    }
+
+    const savedValue = window.localStorage.getItem(
+        SCRATCHPAD_FOCUS_MINUTES_STORAGE_KEY
+    );
+
+    const parsedMinutes = Number(savedValue);
+
+    if (!Number.isInteger(parsedMinutes)) {
+        return DEFAULT_FOCUS_MINUTES;
+    }
+
+    if (
+        parsedMinutes < MIN_FOCUS_MINUTES ||
+        parsedMinutes > MAX_FOCUS_MINUTES
+    ) {
+        return DEFAULT_FOCUS_MINUTES;
+    }
+
+    return parsedMinutes;
+}
+
+function formatCountdown(totalSeconds) {
+    const safeSeconds = Math.max(
+        0,
+        Math.floor(Number(totalSeconds) || 0)
+    );
+
+    const minutes = Math.floor(safeSeconds / 60);
+    const seconds = safeSeconds % 60;
+
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
+        2,
+        "0"
+    )}`;
+}
+
 const pageStyle = {
     width: "100%",
     maxWidth: 800,
@@ -45,6 +255,53 @@ const answerCardStyle = {
     borderRadius: 12,
     padding: "clamp(14px, 3.5vw, 16px)",
     marginBottom: 16,
+};
+
+const scratchpadCardStyle = {
+    width: "100%",
+    boxSizing: "border-box",
+    border: "1px solid var(--color-border, #374151)",
+    background: "var(--color-surface, #1f2937)",
+    color: "var(--color-text, #f9fafb)",
+    borderRadius: 12,
+    padding: 11,
+    marginBottom: 20,
+};
+
+const scratchpadTextareaStyle = {
+    width: "100%",
+    minHeight: 240,
+    boxSizing: "border-box",
+    padding: 10,
+    marginTop: 4,
+    border: "1px solid var(--color-border, #374151)",
+    borderRadius: 8,
+    background: "var(--color-bg, #111827)",
+    color: "var(--color-text, #f9fafb)",
+    fontSize: 15,
+    lineHeight: 1.6,
+    resize: "vertical",
+    outline: "none",
+};
+
+const focusProgressTrackStyle = {
+    width: "100%",
+    height: 12,
+    overflow: "hidden",
+    borderRadius: 999,
+    background: "rgba(127, 29, 29, 0.3)",
+    border: "1px solid rgba(248, 113, 113, 0.45)",
+};
+
+const focusEndModalOverlayStyle = {
+    position: "fixed",
+    inset: 0,
+    zIndex: 1500,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "rgba(0, 0, 0, 0.68)",
 };
 
 const titleParentPathStyle = {
@@ -447,6 +704,28 @@ export default function QuizPlayPage() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
 
+    const [isScratchpadVisible, setIsScratchpadVisible] = useState(
+        readScratchpadVisible
+    );
+
+    const [scratchpadDrafts, setScratchpadDrafts] = useState(
+        readScratchpadDrafts
+    );
+
+    const [focusDurationMinutes, setFocusDurationMinutes] = useState(
+        readScratchpadFocusMinutes
+    );
+
+    const focusDurationSeconds = focusDurationMinutes * 60;
+
+    const [isFocusActive, setIsFocusActive] = useState(false);
+    const [focusEndsAt, setFocusEndsAt] = useState(null);
+    const [focusRemainingSeconds, setFocusRemainingSeconds] = useState(
+        DEFAULT_FOCUS_MINUTES * 60
+    );
+
+    const [focusEndModalOpen, setFocusEndModalOpen] = useState(false);
+
     const [nextSplashOpen, setNextSplashOpen] = useState(false);
     const [splashMessage, setSplashMessage] = useState("좋아요!");
     const nextSplashTimerRef = useRef(null);
@@ -470,6 +749,20 @@ export default function QuizPlayPage() {
     const [timeAdjustError, setTimeAdjustError] = useState("");
 
     const problems = localProblems;
+
+    const currentProblemId = problems[currentIndex]?.problemId;
+
+    const currentScratchpadDraft =
+        currentProblemId == null
+            ? ""
+            : scratchpadDrafts[String(currentProblemId)]?.text ?? "";
+
+    const resetFocusSession = () => {
+        setIsFocusActive(false);
+        setFocusEndsAt(null);
+        setFocusRemainingSeconds(focusDurationSeconds);
+        setFocusEndModalOpen(false);
+    };
 
     const resolveFolderStartIndex = async (targetFolderId, fetchedProblems) => {
         if (!targetFolderId || fetchedProblems.length === 0) {
@@ -515,6 +808,17 @@ export default function QuizPlayPage() {
 
         return {};
     };
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(
+                SCRATCHPAD_FOCUS_MINUTES_STORAGE_KEY,
+                String(focusDurationMinutes)
+            );
+        } catch (error) {
+            console.warn("집중 시간 설정 저장 실패:", error);
+        }
+    }, [focusDurationMinutes]);
 
     useEffect(() => {
         let ignore = false;
@@ -709,6 +1013,176 @@ export default function QuizPlayPage() {
         };
     }, []);
 
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(
+                SCRATCHPAD_VISIBLE_STORAGE_KEY,
+                String(isScratchpadVisible)
+            );
+        } catch (error) {
+            console.warn("연습장 표시 상태 저장 실패:", error);
+        }
+    }, [isScratchpadVisible]);
+
+    useEffect(() => {
+        const saveTimer = window.setTimeout(() => {
+            try {
+                const prunedDrafts =
+                    pruneScratchpadDrafts(scratchpadDrafts);
+
+                const currentSerialized =
+                    JSON.stringify(scratchpadDrafts);
+
+                const prunedSerialized =
+                    JSON.stringify(prunedDrafts);
+
+                window.localStorage.setItem(
+                    SCRATCHPAD_DRAFTS_STORAGE_KEY,
+                    prunedSerialized
+                );
+
+                // 개수 또는 용량 제한으로 제거된 답안이 있다면
+                // React 상태도 실제 저장 결과와 동일하게 맞춘다.
+                if (currentSerialized !== prunedSerialized) {
+                    setScratchpadDrafts(prunedDrafts);
+                }
+            } catch (error) {
+                console.warn("연습장 임시 답안 저장 실패:", error);
+            }
+        }, SCRATCHPAD_SAVE_DEBOUNCE_MS);
+
+        return () => {
+            window.clearTimeout(saveTimer);
+        };
+    }, [scratchpadDrafts]);
+
+    useEffect(() => {
+        resetFocusSession();
+    }, [currentProblemId]);
+
+    useEffect(() => {
+        if (!isFocusActive || focusEndsAt == null) {
+            return undefined;
+        }
+
+        const updateRemainingTime = () => {
+            const remainingSeconds = Math.max(
+                0,
+                Math.ceil((focusEndsAt - Date.now()) / 1000)
+            );
+
+            setFocusRemainingSeconds(remainingSeconds);
+
+            if (remainingSeconds === 0) {
+                setIsFocusActive(false);
+                setFocusEndsAt(null);
+                setFocusEndModalOpen(true);
+
+                if (document.activeElement instanceof HTMLElement) {
+                    document.activeElement.blur();
+                }
+            }
+        };
+
+        updateRemainingTime();
+
+        const intervalId = window.setInterval(
+            updateRemainingTime,
+            250
+        );
+
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [isFocusActive, focusEndsAt]);
+
+    const handleScratchpadChange = (value) => {
+        if (currentProblemId == null) {
+            return;
+        }
+
+        const problemKey = String(currentProblemId);
+
+        setScratchpadDrafts((prev) => {
+            const next = { ...prev };
+
+            if (value.length === 0) {
+                delete next[problemKey];
+                return next;
+            }
+
+            next[problemKey] = {
+                text: value,
+                updatedAt: Date.now(),
+            };
+
+            return next;
+        });
+    };
+
+    const handleFocusDurationChange = (value) => {
+        if (isFocusActive) {
+            return;
+        }
+
+        const nextMinutes = Number(value);
+
+        if (!Number.isInteger(nextMinutes)) {
+            return;
+        }
+
+        if (
+            nextMinutes < MIN_FOCUS_MINUTES ||
+            nextMinutes > MAX_FOCUS_MINUTES
+        ) {
+            return;
+        }
+
+        setFocusDurationMinutes(nextMinutes);
+        setFocusRemainingSeconds(nextMinutes * 60);
+    };
+
+    const handleHideScratchpad = () => {
+        if (isFocusActive) {
+            const shouldStopAndHide = window.confirm(
+                "진행 중인 집중 타이머를 종료하고 연습장을 숨길까요?"
+            );
+
+            if (!shouldStopAndHide) {
+                return;
+            }
+
+            resetFocusSession();
+        }
+
+        setIsScratchpadVisible(false);
+    };
+
+    const handleShowScratchpad = () => {
+        setIsScratchpadVisible(true);
+    };
+
+    const handleStartFocus = () => {
+        setFocusEndModalOpen(false);
+        setFocusRemainingSeconds(focusDurationSeconds);
+        setFocusEndsAt(
+            Date.now() + focusDurationSeconds * 1000
+        );
+        setIsFocusActive(true);
+    };
+
+    const handleStopFocus = () => {
+        const shouldStop = window.confirm(
+            "진행 중인 집중 타이머를 종료할까요?"
+        );
+
+        if (!shouldStop) {
+            return;
+        }
+
+        resetFocusSession();
+    };
+
     const handleExit = () => {
         navigate("/");
     };
@@ -738,6 +1212,8 @@ export default function QuizPlayPage() {
     };
 
     const goNext = () => {
+        resetFocusSession();
+
         const next = currentIndex + 1;
 
         if (next >= problems.length) {
@@ -769,6 +1245,8 @@ export default function QuizPlayPage() {
     };
 
     const goNextWithSplash = () => {
+        resetFocusSession();
+
         if (nextSplashTimerRef.current) {
             clearTimeout(nextSplashTimerRef.current);
         }
@@ -789,6 +1267,7 @@ export default function QuizPlayPage() {
             return;
         }
 
+        resetFocusSession();
         setCurrentIndex(prev);
         setShowAnswer(false);
     };
@@ -939,9 +1418,26 @@ export default function QuizPlayPage() {
         setTimeAdjustError("");
     };
 
-    const toggleAnswerByPageClick = () => {
+    const toggleAnswerByPageClick = (event) => {
         if (submitting) return;
         if (timeAdjustModal.open) return;
+        if (focusEndModalOpen) return;
+        if (nextSplashOpen) return;
+
+        const blockedElement = event.target?.closest?.(
+            [
+                "button",
+                "textarea",
+                "input",
+                "select",
+                "a",
+                "[data-prevent-answer-toggle]",
+            ].join(", ")
+        );
+
+        if (blockedElement) {
+            return;
+        }
 
         setShowAnswer((prev) => !prev);
     };
@@ -970,6 +1466,20 @@ export default function QuizPlayPage() {
         }
 
         await submitCurrentProblemAndGoNext(elapsedSeconds);
+    };
+
+    const handleFocusSubmitAndNext = async () => {
+        setFocusEndModalOpen(false);
+        await handleSubmitAndNextClick();
+    };
+
+    const handleFocusMore = () => {
+        setFocusEndModalOpen(false);
+        setFocusRemainingSeconds(focusDurationSeconds);
+        setFocusEndsAt(
+            Date.now() + focusDurationSeconds * 1000
+        );
+        setIsFocusActive(true);
     };
 
     const handleSpeakAnswer = () => {
@@ -1198,7 +1708,10 @@ export default function QuizPlayPage() {
             )}
 
             {showAnswer && (
-                <div>
+                <div
+                    data-prevent-answer-toggle
+                    onClick={(event) => event.stopPropagation()}
+                >
                     <div style={answerCardStyle}>
                         <div style={{ marginBottom: 20 }}>
                             <div style={{ marginBottom: 6, fontWeight: 600 }}>해설</div>
@@ -1234,6 +1747,21 @@ export default function QuizPlayPage() {
                         </button>
                     </div>
                 </div>
+            )}
+
+            {isScratchpadVisible && (
+                <AnswerScratchpad
+                    value={currentScratchpadDraft}
+                    onChange={handleScratchpadChange}
+                    onHide={handleHideScratchpad}
+                    isFocusActive={isFocusActive}
+                    focusDurationMinutes={focusDurationMinutes}
+                    focusDurationSeconds={focusDurationSeconds}
+                    focusRemainingSeconds={focusRemainingSeconds}
+                    onFocusDurationChange={handleFocusDurationChange}
+                    onStartFocus={handleStartFocus}
+                    onStopFocus={handleStopFocus}
+                />
             )}
 
             {submissionError && (
@@ -1393,12 +1921,70 @@ export default function QuizPlayPage() {
                 </div>
             )}
 
+            {focusEndModalOpen && (
+                <div
+                    data-prevent-answer-toggle
+                    onClick={(event) => event.stopPropagation()}
+                    style={focusEndModalOverlayStyle}
+                >
+                    <div style={modalCardStyle}>
+                        <h2 style={{ marginTop: 0 }}>
+                            {focusDurationMinutes}분 집중이 종료되었습니다.
+                        </h2>
+
+                        <p
+                            style={{
+                                marginBottom: 24,
+                                lineHeight: 1.6,
+                                color: "var(--color-text-muted, #9ca3af)",
+                            }}
+                        >
+                            현재 문제를 제출하고 다음 문제로 이동하거나,
+                            같은 문제를 좀 더 풀 수 있습니다.
+                        </p>
+
+                        <div
+                            style={{
+                                display: "flex",
+                                justifyContent: "flex-end",
+                                gap: 8,
+                            }}
+                        >
+                            <button
+                                type="button"
+                                style={getButtonStyle(submitting)}
+                                onClick={handleFocusSubmitAndNext}
+                                disabled={submitting}
+                            >
+                                {submitting
+                                    ? "제출 중..."
+                                    : "제출 후 다음"}
+                            </button>
+
+                            <button
+                                type="button"
+                                style={{
+                                    ...getButtonStyle(false),
+                                    borderColor: "#ef4444",
+                                    background: "#991b1b",
+                                }}
+                                onClick={handleFocusMore}
+                            >
+                                {focusDurationMinutes}분만 더
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div onClick={(e) => e.stopPropagation()}>
                 <FabGroup
                     onEdit={goEdit}
                     onHome={() => navigate("/")}
                     onToggleMusic={() => setIsMusicOn((v) => !v)}
                     isMusicOn={isMusicOn}
+                    onShowScratchpad={handleShowScratchpad}
+                    showScratchpadAction={!isScratchpadVisible}
                 />
             </div>
 
@@ -1424,6 +2010,194 @@ export default function QuizPlayPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+function AnswerScratchpad({
+                              value,
+                              onChange,
+                              onHide,
+                              isFocusActive,
+                              focusDurationMinutes,
+                              focusDurationSeconds,
+                              focusRemainingSeconds,
+                              onFocusDurationChange,
+                              onStartFocus,
+                              onStopFocus,
+                          }) {
+    const progressPercent = Math.max(
+        0,
+        Math.min(
+            100,
+            (focusRemainingSeconds / focusDurationSeconds) * 100
+        )
+    );
+
+    return (
+        <section
+            data-prevent-answer-toggle
+            onClick={(event) => event.stopPropagation()}
+            style={scratchpadCardStyle}
+        >
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 16,
+                }}
+            >
+                <h2
+                    style={{
+                        margin: 0,
+                        fontSize: 17,
+                        lineHeight: 1.3,
+                    }}
+                >
+                    연습장
+                </h2>
+
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                    }}
+                >
+                    <select
+                        value={focusDurationMinutes}
+                        onChange={(event) =>
+                            onFocusDurationChange(event.target.value)
+                        }
+                        disabled={isFocusActive}
+                        aria-label="집중 시간 선택"
+                        title="집중 시간 선택"
+                        style={{
+                            height: 35,
+                            padding: "0 7px",
+                            borderRadius: 6,
+                            border: "1px solid var(--color-border, #374151)",
+                            background: "var(--color-bg, #111827)",
+                            color: "var(--color-text, #f9fafb)",
+                            fontSize: 13,
+                            cursor: isFocusActive
+                                ? "not-allowed"
+                                : "pointer",
+                            opacity: isFocusActive ? 0.65 : 1,
+                        }}
+                    >
+                        {Array.from(
+                            {
+                                length:
+                                    MAX_FOCUS_MINUTES -
+                                    MIN_FOCUS_MINUTES +
+                                    1,
+                            },
+                            (_, index) =>
+                                MIN_FOCUS_MINUTES + index
+                        ).map((minutes) => (
+                            <option key={minutes} value={minutes}>
+                                {minutes}분
+                            </option>
+                        ))}
+                    </select>
+
+                    <button
+                        type="button"
+                        style={{
+                            ...getButtonStyle(false, "small"),
+                            borderColor: "#ef4444",
+                            background: isFocusActive
+                                ? "#7f1d1d"
+                                : "#991b1b",
+                        }}
+                        onClick={
+                            isFocusActive
+                                ? onStopFocus
+                                : onStartFocus
+                        }
+                    >
+                        {isFocusActive ? "집중 종료" : "시작"}
+                    </button>
+
+                    <button
+                        type="button"
+                        style={getButtonStyle(false, "small")}
+                        onClick={onHide}
+                    >
+                        숨기기
+                    </button>
+                </div>
+            </div>
+
+            {isFocusActive && (
+                <div
+                    style={{
+                        marginTop: 16,
+                        marginBottom: 4,
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: 8,
+                        }}
+                    >
+                        <span
+                            style={{
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: "#fca5a5",
+                            }}
+                        >
+                            {focusDurationMinutes}분 집중
+                        </span>
+
+                        <strong
+                            style={{
+                                fontSize: 18,
+                                fontVariantNumeric: "tabular-nums",
+                                color: "#f87171",
+                            }}
+                        >
+                            {formatCountdown(
+                                focusRemainingSeconds
+                            )}
+                        </strong>
+                    </div>
+
+                    <div
+                        role="progressbar"
+                        aria-label="집중 남은 시간"
+                        aria-valuemin={0}
+                        aria-valuemax={focusDurationSeconds}
+                        aria-valuenow={focusRemainingSeconds}
+                        style={focusProgressTrackStyle}
+                    >
+                        <div
+                            style={{
+                                width: `${progressPercent}%`,
+                                height: "100%",
+                                borderRadius: 999,
+                                background: "#ef4444",
+                                transition: "width 0.25s linear",
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+
+            <textarea
+                value={value}
+                onChange={(event) =>
+                    onChange(event.target.value)
+                }
+                placeholder="문제를 보고 생각한 내용을 자유롭게 작성하세요."
+                style={scratchpadTextareaStyle}
+            />
+        </section>
     );
 }
 
