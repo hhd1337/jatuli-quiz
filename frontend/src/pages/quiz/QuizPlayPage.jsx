@@ -234,7 +234,7 @@ const scratchpadCardStyle = {
     background: "var(--color-surface, #1f2937)",
     color: "var(--color-text, #f9fafb)",
     borderRadius: 12,
-    padding: 16,
+    padding: 11,
     marginBottom: 20,
 };
 
@@ -242,8 +242,8 @@ const scratchpadTextareaStyle = {
     width: "100%",
     minHeight: 240,
     boxSizing: "border-box",
-    padding: 14,
-    marginTop: 14,
+    padding: 10,
+    marginTop: 4,
     border: "1px solid var(--color-border, #374151)",
     borderRadius: 8,
     background: "var(--color-bg, #111827)",
