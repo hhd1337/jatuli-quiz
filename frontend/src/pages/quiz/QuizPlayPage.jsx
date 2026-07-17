@@ -2209,7 +2209,7 @@ function AnswerScratchpad({
 
                     <div
                         role="progressbar"
-                        aria-label="5분 집중 남은 시간"
+                        aria-label="집중 남은 시간"
                         aria-valuemin={0}
                         aria-valuemax={focusDurationSeconds}
                         aria-valuenow={focusRemainingSeconds}
