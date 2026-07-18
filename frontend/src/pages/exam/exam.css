@@ -1103,3 +1103,16 @@ button.exam-tree-folder-button:hover
     background: #2a1a1c;
 }
 
+/* 시험 진행 페이지 카드 */
+.exam-play-header,
+.exam-problem-card,
+.exam-submit-area {
+    border-radius: 10px;
+}
+
+/* 시험 결과 페이지 카드 */
+.exam-complete-card,
+.exam-review-card,
+.exam-result-actions {
+    border-radius: 10px;
+}
