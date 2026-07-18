@@ -252,22 +252,29 @@
     top: 16px;
     left: 50%;
     z-index: 30;
+
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 20px;
+
     width: min(calc(100% - 40px), 920px);
-    padding: 14px 18px;
-    border: 1px solid rgba(128, 128, 128, 0.2);
+    padding: 14px 18px 20px;
+
+    border: 1px solid #6f292c;
     border-radius: 17px;
-    background: color-mix(
-            in srgb,
-            var(--color-surface, #fff) 94%,
-            transparent
-    );
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+
+    background: #241611;
+    color: var(--color-text);
+
+    box-shadow:
+            0 8px 24px rgba(0, 0, 0, 0.3),
+            0 0 18px rgba(130, 20, 25, 0.12);
+
     backdrop-filter: blur(12px);
     transform: translateX(-50%);
     box-sizing: border-box;
+    overflow: hidden;
 }
 
 .exam-play-header > div:first-child {
@@ -282,15 +289,64 @@
 }
 
 .exam-timer {
-    min-width: 92px;
-    font-size: 23px;
-    font-weight: 800;
+    min-width: 112px;
+
+    color: #ff2b2b;
+    font-size: 26px;
+    font-weight: 900;
+    line-height: 1;
     text-align: right;
     font-variant-numeric: tabular-nums;
+
+    letter-spacing: 0.02em;
+
 }
 
 .exam-timer.is-urgent {
-    color: #b3261e;
+    color: #ff0000;
+    animation: exam-timer-pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes exam-timer-pulse {
+    from {
+        opacity: 1;
+        text-shadow:
+                0 0 8px rgba(255, 0, 0, 0.45),
+                0 0 16px rgba(255, 0, 0, 0.25);
+    }
+
+    to {
+        opacity: 0.72;
+        text-shadow:
+                0 0 12px rgba(255, 0, 0, 0.75),
+                0 0 24px rgba(255, 0, 0, 0.4);
+    }
+}
+
+.exam-countdown-track {
+    position: absolute;
+    right: 18px;
+    bottom: 8px;
+    left: 18px;
+
+    height: 3px;
+    overflow: hidden;
+
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.exam-countdown-progress {
+    height: 100%;
+    border-radius: inherit;
+
+    background: #ff2020;
+
+    box-shadow:
+            0 0 7px rgba(255, 20, 20, 0.75),
+            0 0 12px rgba(255, 20, 20, 0.35);
+
+    transition: width 0.4s linear;
 }
 
 .exam-problem-list {
@@ -599,16 +655,6 @@
     background: var(--color-surface);
 }
 
-.exam-review-card__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 15px 18px;
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-button-bg);
-}
-
 .exam-review-card__header > strong {
     flex: 0 0 auto;
     color: var(--color-text);
@@ -624,52 +670,12 @@
     white-space: nowrap;
 }
 
-.exam-review-block {
-    padding: 18px;
-    border-bottom: 1px solid var(--color-border);
-}
-
-.exam-review-block:last-child {
-    border-bottom: 0;
-}
-
-.exam-review-block h3 {
-    margin: 0 0 10px;
-    color: var(--color-text-muted);
-    font-size: 13px;
-    letter-spacing: -0.02em;
-}
-
-.exam-review-block--answer h3 {
-    color: var(--color-primary);
-}
-
-.exam-review-block--user h3 {
-    color: var(--color-accent-strong);
-}
-
 .exam-review-text {
     color: var(--color-text);
     font-size: 15px;
     line-height: 1.75;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
-}
-
-.exam-review-block--answer {
-    background: color-mix(
-            in srgb,
-            var(--color-primary) 7%,
-            var(--color-surface)
-    );
-}
-
-.exam-review-block--user {
-    background: color-mix(
-            in srgb,
-            var(--color-accent-strong) 6%,
-            var(--color-surface)
-    );
 }
 
 .exam-result-actions {
@@ -722,8 +728,41 @@
         white-space: normal;
     }
 
-    .exam-review-block {
-        padding: 16px 14px;
+    .exam-review-card__header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 5px;
+        padding: 14px 16px;
+    }
+
+    .exam-review-card__header > span {
+        width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .exam-review-main-content {
+        padding: 18px 16px;
+    }
+
+    .exam-review-question {
+        margin-bottom: 22px;
+        font-size: 15px;
+        line-height: 1.7;
+    }
+
+    .exam-review-content-group {
+        margin-top: 18px;
+    }
+
+    .exam-review-text {
+        font-size: 14px;
+        line-height: 1.7;
+    }
+
+    .exam-review-user-answer {
+        min-height: 82px;
+        padding: 18px 16px 22px;
     }
 
     .exam-review-text {
@@ -939,3 +978,128 @@ button.exam-tree-folder-button:hover
     padding-top: 3px;
     padding-bottom: 3px;
 }
+.exam-problem-card {
+    transition:
+            background-color 0.2s ease,
+            border-color 0.2s ease,
+            box-shadow 0.2s ease;
+}
+
+.exam-problem-card.is-answered {
+    border-color: color-mix(
+            in srgb,
+            var(--color-primary) 60%,
+            var(--color-border)
+    );
+}
+
+.exam-problem-card.is-answered
+.exam-problem-meta > strong,
+.exam-problem-card.is-answered
+.exam-answer-field > span {
+    color: color-mix(
+            in srgb,
+            var(--color-primary) 72%,
+            var(--color-text)
+    );
+}
+
+.exam-review-card {
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    background: var(--color-surface);
+}
+
+/* 문제 번호와 폴더 경로 */
+.exam-review-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 22px;
+
+    background: var(--color-surface);
+}
+
+/* 11번 문제 */
+.exam-review-card__header > strong {
+    flex: 0 0 auto;
+    color: #d1d5db;
+    font-size: 17px;
+    font-weight: 800;
+}
+
+/* /자바/기본/패키지와 접근제어자 */
+.exam-review-card__header > span {
+    min-width: 0;
+    overflow: hidden;
+    color: #b6bbc4;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/*
+ * 문제, 해설, 정답은 하나의 동일한 영역이다.
+ * 내부에는 가로 구분선을 두지 않는다.
+ */
+.exam-review-main-content {
+    padding: 22px;
+
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+.exam-review-question {
+    margin-bottom: 26px;
+    color: var(--color-text);
+    font-size: 16px;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.exam-review-content-group {
+    margin-top: 22px;
+}
+
+.exam-review-content-group h3,
+.exam-review-user-answer h3 {
+    margin: 0 0 10px;
+    color: var(--color-text);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.exam-review-text {
+    color: var(--color-text);
+    font-size: 15px;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+/*
+ * 문제·해설·정답 영역과 사용자 답안 사이에만
+ * 하나의 가로선을 표시한다.
+ */
+.exam-review-user-answer {
+    min-height: 100px;
+    padding: 20px 22px 24px;
+
+    border-top: 1px solid var(--color-border);
+
+    background: var(--color-surface);
+    color: var(--color-text);
+
+    transition:
+            background-color 0.18s ease,
+            border-color 0.18s ease;
+}
+
+.exam-review-user-answer.is-unanswered {
+    background: #2a1a1c;
+}
+

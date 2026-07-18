@@ -238,63 +238,80 @@ export default function ExamCompletePage() {
                 </div>
 
                 <div className="exam-review-list">
-                    {comparisonProblems.map(
-                        (problem, index) => (
+                    {comparisonProblems.map((problem, index) => {
+                        const hasUserAnswer =
+                            Boolean(problem.userAnswer?.trim());
+
+                        return (
                             <article
                                 key={problem.problemId}
                                 className="exam-review-card"
                             >
                                 <header className="exam-review-card__header">
                                     <strong>
-                                        {problem.orderNumber ??
-                                            index + 1}
+                                        {problem.orderNumber ?? index + 1}
                                         번 문제
                                     </strong>
 
                                     {problem.folderFullPath && (
                                         <span>
-                                            {
-                                                problem.folderFullPath
-                                            }
-                                        </span>
+                            {problem.folderFullPath}
+                        </span>
                                     )}
                                 </header>
 
-                                <section className="exam-review-block">
-                                    <h3>문제</h3>
-
-                                    <div className="exam-review-text">
+                                <div className="exam-review-main-content">
+                                    <div className="exam-review-question">
                                         {normalizeText(
                                             problem.questionText,
                                             "문제 내용이 없습니다."
                                         )}
                                     </div>
-                                </section>
 
-                                <section className="exam-review-block exam-review-block--answer">
-                                    <h3>정답</h3>
+                                    <section className="exam-review-content-group">
+                                        <h3>해설</h3>
 
-                                    <div className="exam-review-text">
-                                        {normalizeText(
-                                            problem.answerText,
-                                            "등록된 정답이 없습니다."
-                                        )}
-                                    </div>
-                                </section>
+                                        <div className="exam-review-text">
+                                            {normalizeText(
+                                                problem.explanationText,
+                                                "등록된 해설이 없습니다."
+                                            )}
+                                        </div>
+                                    </section>
 
-                                <section className="exam-review-block exam-review-block--user">
+                                    <section className="exam-review-content-group">
+                                        <h3>정답</h3>
+
+                                        <div className="exam-review-text">
+                                            {normalizeText(
+                                                problem.answerText,
+                                                "등록된 정답이 없습니다."
+                                            )}
+                                        </div>
+                                    </section>
+                                </div>
+
+                                <section
+                                    className={[
+                                        "exam-review-user-answer",
+                                        !hasUserAnswer
+                                            ? "is-unanswered"
+                                            : "",
+                                    ]
+                                        .filter(Boolean)
+                                        .join(" ")}
+                                >
                                     <h3>내가 적은 답</h3>
 
-                                    <div className="exam-review-text">
-                                        {normalizeText(
-                                            problem.userAnswer,
-                                            "작성한 답안이 없습니다."
-                                        )}
-                                    </div>
+                                    {hasUserAnswer && (
+                                        <div className="exam-review-text">
+                                            {problem.userAnswer}
+                                        </div>
+                                    )}
                                 </section>
                             </article>
-                        )
-                    )}
+                        );
+                    })}
                 </div>
             </section>
 
