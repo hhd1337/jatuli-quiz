@@ -14,6 +14,8 @@ import com.hhd1337.jatuli_quiz.domain.problem.dto.ParsedProblemContent;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemBookmarkResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportRequest;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportResponse;
+import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemUpdateRequest;
+import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemUpdateResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
 import com.hhd1337.jatuli_quiz.domain.problem.repository.ProblemRepository;
 import com.hhd1337.jatuli_quiz.domain.progress.entity.LearningProgress;
@@ -218,5 +220,22 @@ public class ProblemCommandServiceImpl implements ProblemCommandService {
         }
 
         return -1;
+    }
+
+    @Override
+    public ProblemUpdateResponse.UpdateProblemResponse updateProblem(
+            Long problemId,
+            ProblemUpdateRequest.UpdateProblemRequest request
+    ) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.PROBLEM_NOT_FOUND));
+
+        problem.updateContent(
+                request.getQuestionText(),
+                request.getExplanationText(),
+                request.getAnswerText()
+        );
+
+        return ProblemConverter.toUpdateProblemResponse(problem);
     }
 }

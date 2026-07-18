@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 export default function FabGroup({
-                                     onEdit,
                                      onHome,
                                      onToggleMusic,
                                      isMusicOn,
@@ -68,12 +67,6 @@ export default function FabGroup({
                         gap: 10,
                     }}
                 >
-                    <Action
-                        icon="✏️"
-                        label="문제 수정"
-                        onClick={onEdit}
-                    />
-
                     <Action
                         icon="🏠"
                         label="홈으로 이동"
