@@ -264,30 +264,56 @@ export default function ExamPlayPage() {
         remainingSeconds > 0 &&
         remainingSeconds <= 60;
 
+    const remainingTimePercent =
+        exam.timeLimitSeconds > 0
+            ? Math.max(
+                0,
+                Math.min(
+                    100,
+                    (remainingSeconds /
+                        exam.timeLimitSeconds) *
+                    100
+                )
+            )
+            : 0;
+
     return (
         <main className="exam-play-page">
             <header className="exam-play-header">
-                <div>
+                <div className="exam-play-header__status">
                     <strong>시험 진행 중</strong>
 
                     <span>
-                        {answeredProblemCount} /{" "}
-                        {exam.totalProblemCount} 답안
-                        작성
-                    </span>
+            {answeredProblemCount} /{" "}
+                        {exam.totalProblemCount} 답안 작성
+        </span>
                 </div>
 
                 <div
                     className={`exam-timer ${
-                        isUrgent
-                            ? "is-urgent"
-                            : ""
+                        isUrgent ? "is-urgent" : ""
                     }`}
                     aria-live="polite"
                 >
-                    {formatTimer(
-                        remainingSeconds
+                    {formatTimer(remainingSeconds)}
+                </div>
+
+                <div
+                    className="exam-countdown-track"
+                    role="progressbar"
+                    aria-label="시험 남은 시간"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(
+                        remainingTimePercent
                     )}
+                >
+                    <div
+                        className="exam-countdown-progress"
+                        style={{
+                            width: `${remainingTimePercent}%`,
+                        }}
+                    />
                 </div>
             </header>
 
@@ -301,11 +327,24 @@ export default function ExamPlayPage() {
             )}
 
             <section className="exam-problem-list">
-                {exam.problems.map(
-                    (problem, index) => (
+                {exam.problems.map((problem, index) => {
+                    const answer =
+                        exam.answers[
+                            String(problem.problemId)
+                            ] ?? "";
+
+                    const isAnswered =
+                        answer.trim().length > 0;
+
+                    return (
                         <article
                             key={problem.problemId}
-                            className="exam-problem-card"
+                            className={[
+                                "exam-problem-card",
+                                isAnswered ? "is-answered" : "",
+                            ]
+                                .filter(Boolean)
+                                .join(" ")}
                         >
                             <div className="exam-problem-meta">
                                 <strong>
@@ -313,9 +352,9 @@ export default function ExamPlayPage() {
                                 </strong>
 
                                 <span>
-                                    {problem.folderFullPath ??
-                                        problem.folderName}
-                                </span>
+                    {problem.folderFullPath ??
+                        problem.folderName}
+                </span>
                             </div>
 
                             <div className="exam-question-text">
@@ -323,32 +362,21 @@ export default function ExamPlayPage() {
                             </div>
 
                             <label className="exam-answer-field">
-                                <span>내 답안</span>
-
                                 <textarea
-                                    value={
-                                        exam.answers[
-                                            String(
-                                                problem.problemId
-                                            )
-                                            ] ?? ""
-                                    }
+                                    value={answer}
                                     onChange={(event) =>
                                         handleAnswerChange(
                                             problem.problemId,
-                                            event.target
-                                                .value
+                                            event.target.value
                                         )
                                     }
                                     placeholder="생각나는 내용을 자유롭게 작성하세요."
-                                    disabled={
-                                        isSubmitting
-                                    }
+                                    disabled={isSubmitting}
                                 />
                             </label>
                         </article>
-                    )
-                )}
+                    );
+                })}
             </section>
 
             <div className="exam-submit-area">
