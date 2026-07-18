@@ -5,7 +5,6 @@ import AppShell from "./AppShell.jsx";
 import LoginPage from "../pages/auth/LoginPage.jsx";
 import HomePage from "../pages/home/HomePage.jsx";
 import QuizPlayPage from "../pages/quiz/QuizPlayPage.jsx";
-import QuizEditPage from "../pages/quiz/QuizEditPage.jsx";
 import RoutinePage from "../pages/routine/RoutinePage.jsx";
 import NotFoundPage from "../pages/error/NotFoundPage.jsx";
 import HealthCheckPage from "../pages/test/HealthCheckPage.jsx";
@@ -23,10 +22,6 @@ export const router = createBrowserRouter([
             {
                 path: "/quiz/play",
                 element: <QuizPlayPage />,
-            },
-            {
-                path: "/quiz/:quizId/edit",
-                element: <QuizEditPage />,
             },
             {
                 path: "/routine",
