@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getHomeData } from "../../shared/api/homeApi";
 import { getAuthStatus, logout } from "../../shared/api/authApi";
+import ExamEntryCard from "../exam/ExamEntryCard.jsx";
 
 import {
     createFolder,
@@ -24,7 +25,7 @@ const pageStyle = {
 };
 
 const sectionStyle = {
-    marginTop: 8,
+    marginTop: 5,
 };
 
 const cardStyle = {
@@ -1460,7 +1461,7 @@ export default function HomePage() {
                             letterSpacing: "-0.05em",
                         }}
                     >
-                        정진
+                        나는 독한 사람이다
                     </h1>
 
                     <div
@@ -1507,25 +1508,20 @@ export default function HomePage() {
                         </button>
                     </div>
 
-                    <ol
+                    <ul
                         style={{
                             ...mutedTextStyle,
                             gridColumn: "1 / -1",
                             marginTop: 5,
                             marginBottom: 0,
                             paddingLeft: 15,
-                            fontSize: 10,
+                            fontSize: 14,
                             lineHeight: 1.7,
                         }}
                     >
-                        <li>뜨거운 열정도 중요하지만, 지속적인 열정이 더 중요하다.</li>
-                        <li>나의 목표는 백엔드 개발자로서의 압도적인 기본기와 문제해결 경험이다.</li>
-                        <li>
-                            나는 조급함으로 축적 루틴을 망치지 않고, 거북이 마음으로 쌓아
-                            백엔드 괴물이 된다.
-                        </li>
-                        <li>자신을 믿지 못하는 녀석은 노력할 가치도 없다. 나는 나를 믿는다.</li>
-                    </ol>
+                        <li>취업을 못하면 죽는다.</li>
+                        <li>반드시 대기업에 취직한다.</li>
+                    </ul>
                 </div>
             </header>
 
@@ -1621,120 +1617,9 @@ export default function HomePage() {
                 </div>
             </section>
 
-            {/* ================== 북마크 순회 ================== */}
+            {/* ================== 시험보기 ================== */}
             <section style={sectionStyle}>
-                <div
-                    role="button"
-                    tabIndex={hasBookmarkProblems ? 0 : -1}
-                    aria-disabled={!hasBookmarkProblems}
-                    onClick={() => {
-                        if (!hasBookmarkProblems) return;
-                        navigate("/quiz/play?mode=bookmark");
-                    }}
-                    onKeyDown={(e) => {
-                        if (!hasBookmarkProblems) return;
-
-                        if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            navigate("/quiz/play?mode=bookmark");
-                        }
-                    }}
-                    style={{
-                        ...cardStyle,
-                        cursor: hasBookmarkProblems ? "pointer" : "default",
-                        opacity: hasBookmarkProblems ? 1 : 0.65,
-                        transition: "transform 0.15s ease, border-color 0.15s ease",
-                    }}
-                >
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "flex-start",
-                            gap: 16,
-                            marginBottom: 4,
-                        }}
-                    >
-                        <div>
-                            <h3
-                                style={{
-                                    margin: 0,
-                                    fontSize: 18,
-                                    letterSpacing: "-0.04em",
-                                }}
-                            >
-                                북마크 문제 순회
-                            </h3>
-                        </div>
-
-                        <div
-                            style={{
-                                flexShrink: 0,
-                                border: "1px solid var(--color-border)",
-                                borderRadius: 999,
-                                padding: "5px 9px",
-                                color: "var(--color-accent-strong)",
-                                fontSize: 14,
-                                fontWeight: 800,
-                                marginTop: -5,
-                            }}
-                        >
-                            {currentBookmarkedRoundNo}회차 : Lv {summary.level}
-                        </div>
-
-                    </div>
-
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "baseline",
-                            gap: 12,
-                            marginBottom: 10,
-                        }}
-                    >
-                        <div>
-                            <strong
-                                style={{
-                                    fontSize: 28,
-                                    letterSpacing: "-0.04em",
-                                    color: "var(--color-primary)",
-                                }}
-                            >
-                                {bookmarkSolvedCount}
-                            </strong>
-                            <span style={mutedTextStyle}> / {bookmarkTotalCount}문제</span>
-                        </div>
-
-                        <strong
-                            style={{
-                                color: "var(--color-primary)",
-                                fontSize: 16,
-                            }}
-                        >
-                            {bookmarkProgressPercent}%
-                        </strong>
-                    </div>
-
-                    <ProgressBar
-                        value={bookmarkProgressPercent}
-                        height={8}
-                        ariaLabel="북마크 문제 전체 순회 진행률"
-                    />
-
-                    {bookmarkAction?.description && (
-                        <p
-                            style={{
-                                ...mutedTextStyle,
-                                marginTop: 12,
-                                marginBottom: 0,
-                                fontSize: 13,
-                            }}
-                        >
-                            {bookmarkAction.description}
-                        </p>
-                    )}
-                </div>
+                <ExamEntryCard navigate={navigate} />
             </section>
 
             {/* ================== 전체 문제 ================== */}
@@ -1881,6 +1766,122 @@ export default function HomePage() {
                         ))}
                     </div>
                 )}
+            </section>
+
+            {/* ================== 북마크 순회 ================== */}
+            <section style={sectionStyle}>
+                <div
+                    role="button"
+                    tabIndex={hasBookmarkProblems ? 0 : -1}
+                    aria-disabled={!hasBookmarkProblems}
+                    onClick={() => {
+                        if (!hasBookmarkProblems) return;
+                        navigate("/quiz/play?mode=bookmark");
+                    }}
+                    onKeyDown={(e) => {
+                        if (!hasBookmarkProblems) return;
+
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            navigate("/quiz/play?mode=bookmark");
+                        }
+                    }}
+                    style={{
+                        ...cardStyle,
+                        cursor: hasBookmarkProblems ? "pointer" : "default",
+                        opacity: hasBookmarkProblems ? 1 : 0.65,
+                        transition: "transform 0.15s ease, border-color 0.15s ease",
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            gap: 16,
+                            marginBottom: 4,
+                        }}
+                    >
+                        <div>
+                            <h3
+                                style={{
+                                    margin: 0,
+                                    fontSize: 18,
+                                    letterSpacing: "-0.04em",
+                                }}
+                            >
+                                북마크 문제 순회
+                            </h3>
+                        </div>
+
+                        <div
+                            style={{
+                                flexShrink: 0,
+                                border: "1px solid var(--color-border)",
+                                borderRadius: 999,
+                                padding: "5px 9px",
+                                color: "var(--color-accent-strong)",
+                                fontSize: 14,
+                                fontWeight: 800,
+                                marginTop: -5,
+                            }}
+                        >
+                            {currentBookmarkedRoundNo}회차 : Lv {summary.level}
+                        </div>
+
+                    </div>
+
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "baseline",
+                            gap: 12,
+                            marginBottom: 10,
+                        }}
+                    >
+                        <div>
+                            <strong
+                                style={{
+                                    fontSize: 28,
+                                    letterSpacing: "-0.04em",
+                                    color: "var(--color-primary)",
+                                }}
+                            >
+                                {bookmarkSolvedCount}
+                            </strong>
+                            <span style={mutedTextStyle}> / {bookmarkTotalCount}문제</span>
+                        </div>
+
+                        <strong
+                            style={{
+                                color: "var(--color-primary)",
+                                fontSize: 16,
+                            }}
+                        >
+                            {bookmarkProgressPercent}%
+                        </strong>
+                    </div>
+
+                    <ProgressBar
+                        value={bookmarkProgressPercent}
+                        height={8}
+                        ariaLabel="북마크 문제 전체 순회 진행률"
+                    />
+
+                    {bookmarkAction?.description && (
+                        <p
+                            style={{
+                                ...mutedTextStyle,
+                                marginTop: 12,
+                                marginBottom: 0,
+                                fontSize: 13,
+                            }}
+                        >
+                            {bookmarkAction.description}
+                        </p>
+                    )}
+                </div>
             </section>
 
             {problemImportTargetFolder && (

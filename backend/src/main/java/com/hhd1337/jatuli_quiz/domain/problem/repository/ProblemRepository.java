@@ -2,6 +2,7 @@ package com.hhd1337.jatuli_quiz.domain.problem.repository;
 
 import com.hhd1337.jatuli_quiz.domain.folder.entity.Folder;
 import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -128,4 +129,28 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
     @EntityGraph(attributePaths = {"folder"})
     List<Problem> findAllByProblemIdIn(List<Long> problemIds);
+
+    @Query("""
+            select p
+            from Problem p
+            join fetch p.folder f
+            where f.folderId = :folderId
+              and p.isBookmarked = true
+            order by coalesce(p.solvedCount, 0) asc,
+                     p.problemId asc
+            """)
+    List<Problem> findBookmarkedExamCandidates(
+            @Param("folderId") Long folderId
+    );
+
+    @Query("""
+            select p
+            from Problem p
+            join fetch p.folder f
+            where p.problemId in :problemIds
+            """)
+    List<Problem> findAllWithFolderByProblemIdIn(
+            @Param("problemIds")
+            Collection<Long> problemIds
+    );
 }

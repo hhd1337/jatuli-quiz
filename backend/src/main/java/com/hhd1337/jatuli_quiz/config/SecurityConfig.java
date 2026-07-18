@@ -104,7 +104,8 @@ public class SecurityConfig {
 
                                 // TODO: 개발 단계 Swagger 테스트용 임시 허용
                                 "/api/v1/routines/**",
-                                "/api/v1/mentor/**"
+                                "/api/v1/mentor/**",
+                                "/api/v1/exams/**"
                         )
                 )
 
@@ -158,6 +159,21 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/folders/*/practice-cursor").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/folders/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/folders/**").authenticated()
+
+                        // 시험보기 API - 개발 단계 Swagger 테스트용 임시 허용
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/exams/questions"
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/exams/submissions"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/test/github-daily-upload"
+                        ).permitAll()
 
                         // 나머지는 일단 허용
                         .anyRequest().permitAll()
