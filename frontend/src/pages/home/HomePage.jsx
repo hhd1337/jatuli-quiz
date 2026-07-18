@@ -25,7 +25,7 @@ const pageStyle = {
 };
 
 const sectionStyle = {
-    marginTop: 8,
+    marginTop: 5,
 };
 
 const cardStyle = {
@@ -1461,7 +1461,7 @@ export default function HomePage() {
                             letterSpacing: "-0.05em",
                         }}
                     >
-                        나는 독한 사람이다. 정진!
+                        나는 독한 사람이다
                     </h1>
 
                     <div
@@ -1508,25 +1508,20 @@ export default function HomePage() {
                         </button>
                     </div>
 
-                    <ol
+                    <ul
                         style={{
                             ...mutedTextStyle,
                             gridColumn: "1 / -1",
                             marginTop: 5,
                             marginBottom: 0,
                             paddingLeft: 15,
-                            fontSize: 10,
+                            fontSize: 14,
                             lineHeight: 1.7,
                         }}
                     >
-                        <li>뜨거운 열정도 중요하지만, 지속적인 열정이 더 중요하다.</li>
-                        <li>나의 목표는 백엔드 개발자로서의 압도적인 기본기와 문제해결 경험이다.</li>
-                        <li>
-                            나는 조급함으로 축적 루틴을 망치지 않고, 거북이 마음으로 쌓아
-                            백엔드 괴물이 된다.
-                        </li>
-                        <li>자신을 믿지 못하는 녀석은 노력할 가치도 없다. 나는 나를 믿는다.</li>
-                    </ol>
+                        <li>취업을 못하면 죽는다.</li>
+                        <li>반드시 대기업에 취직한다.</li>
+                    </ul>
                 </div>
             </header>
 
@@ -1620,6 +1615,11 @@ export default function HomePage() {
                     </div>
 
                 </div>
+            </section>
+
+            {/* ================== 시험보기 ================== */}
+            <section style={sectionStyle}>
+                <ExamEntryCard navigate={navigate} />
             </section>
 
             {/* ================== 전체 문제 ================== */}
@@ -1766,11 +1766,6 @@ export default function HomePage() {
                         ))}
                     </div>
                 )}
-            </section>
-
-            {/* ================== 시험보기 ================== */}
-            <section style={sectionStyle}>
-                <ExamEntryCard navigate={navigate} />
             </section>
 
             {/* ================== 북마크 순회 ================== */}

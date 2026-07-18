@@ -12,12 +12,11 @@ export default function ExamEntryCard() {
 
             <div className="exam-entry-card__content">
                 <strong className="exam-entry-card__title">
-                    시험보기
+                    시험
                 </strong>
 
                 <p className="exam-entry-card__description">
-                    여러 문제를 선택하고 제한 시간 안에
-                    한 번에 풀어보세요.
+                    선택한 범위의 문제 일괄 시험보기
                 </p>
             </div>
 
