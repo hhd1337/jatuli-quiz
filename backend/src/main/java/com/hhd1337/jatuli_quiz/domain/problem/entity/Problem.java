@@ -105,6 +105,16 @@ public class Problem {
         this.isBookmarked = !this.isBookmarked;
     }
 
+    public void updateContent(
+            String questionText,
+            String explanationText,
+            String answerText
+    ) {
+        this.questionText = questionText;
+        this.explanationText = explanationText;
+        this.answerText = answerText;
+    }
+
     public void markPracticedInBookmarkedRound(Integer roundNo) {
         if (roundNo == null) {
             return;

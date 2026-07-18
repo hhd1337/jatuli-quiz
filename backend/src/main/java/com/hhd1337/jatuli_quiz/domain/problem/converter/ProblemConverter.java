@@ -5,6 +5,7 @@ import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemBookmarkResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemCopyResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportResponse;
+import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemUpdateResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
 import java.util.List;
 
@@ -100,6 +101,25 @@ public class ProblemConverter {
                 .questionText(problem.getQuestionText())
                 .explanationText(problem.getExplanationText())
                 .answerText(problem.getAnswerText())
+                .build();
+    }
+
+    public static ProblemUpdateResponse.UpdateProblemResponse toUpdateProblemResponse(
+            Problem problem
+    ) {
+        Folder folder = problem.getFolder();
+
+        return ProblemUpdateResponse.UpdateProblemResponse.builder()
+                .problemId(problem.getProblemId())
+                .problemNum(problem.getProblemNum())
+                .questionText(problem.getQuestionText())
+                .explanationText(problem.getExplanationText())
+                .answerText(problem.getAnswerText())
+                .isBookmarked(problem.getIsBookmarked())
+                .solvedCount(problem.getSolvedCount())
+                .folderId(folder.getFolderId())
+                .folderName(folder.getName())
+                .folderPath(folder.getFullPath())
                 .build();
     }
 }
