@@ -7,6 +7,8 @@ import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemBookmarkResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemCopyResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportRequest;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportResponse;
+import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemUpdateRequest;
+import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemUpdateResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.service.ProblemCommandService;
 import com.hhd1337.jatuli_quiz.domain.problem.service.ProblemQueryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -42,6 +45,29 @@ public class ProblemRestController {
             @PathVariable Long problemId
     ) {
         return ApiResponse.onSuccess(problemCommandService.toggleBookmark(problemId));
+    }
+
+    @Operation(
+            summary = "문제 수정",
+            description = """
+                    특정 문제의 문제 내용, 해설, 정답을 수정합니다.
+                    
+                    수정 대상은 questionText, explanationText, answerText입니다.
+                    문제 번호, 폴더, 북마크 상태, 풀이 횟수와 같은 학습 진행 정보는 변경하지 않습니다.
+                    
+                    요청한 problemId에 해당하는 문제가 존재하지 않으면 예외를 반환합니다.
+                    문제 내용, 해설, 정답은 모두 비어 있지 않아야 합니다.
+                    수정 성공 시 변경된 문제의 최신 정보를 반환합니다.
+                    """
+    )
+    @PutMapping("/{problemId}")
+    public ApiResponse<ProblemUpdateResponse.UpdateProblemResponse> updateProblem(
+            @PathVariable Long problemId,
+            @Valid @RequestBody ProblemUpdateRequest.UpdateProblemRequest request
+    ) {
+        return ApiResponse.onSuccess(
+                problemCommandService.updateProblem(problemId, request)
+        );
     }
 
     @Operation(
