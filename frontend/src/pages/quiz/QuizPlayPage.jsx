@@ -2257,7 +2257,6 @@ export default function QuizPlayPage() {
                             style={{
                                 ...answerCardStyle,
                                 position: "relative",
-                                paddingRight: 54,
                             }}
                         >
                             <button
