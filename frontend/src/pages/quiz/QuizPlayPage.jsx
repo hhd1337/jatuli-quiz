@@ -2592,7 +2592,6 @@ export default function QuizPlayPage() {
 
             <div onClick={(e) => e.stopPropagation()}>
                 <FabGroup
-                    onEdit={startProblemEditing}
                     onHome={handleExit}
                     onToggleMusic={toggleMusic}
                     isMusicOn={isMusicOn}
