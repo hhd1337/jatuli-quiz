@@ -1,6 +1,7 @@
 import {
     useCallback,
     useEffect,
+    useLayoutEffect,
     useRef,
     useState,
 } from "react";
@@ -22,6 +23,7 @@ import {
     getFolderPracticeCursor,
     submitProblemSubmission,
     toggleProblemBookmark,
+    updateProblem,
 } from "../../shared/api/quizApi";
 import FabGroup from "../../features/fab/FabGroup";
 import MarkdownContent from "../../shared/components/MarkdownContent";
@@ -367,6 +369,76 @@ const answerTextStyle = {
     overflowWrap: "anywhere",
 };
 
+const editingProblemCardStyle = {
+    ...answerCardStyle,
+    background: "rgba(30, 58, 138, 0.24)",
+    borderColor: "#3b82f6",
+    boxShadow: "0 0 0 1px rgba(59, 130, 246, 0.1)",
+};
+
+const editableRawTextBaseStyle = {
+    display: "block",
+    width: "100%",
+    boxSizing: "border-box",
+
+    margin: 0,
+    padding: 0,
+
+    border: "none",
+    borderRadius: 0,
+    outline: "none",
+
+    background: "transparent",
+    color: "var(--color-text, #f9fafb)",
+    caretColor: "#60a5fa",
+
+    fontFamily: "inherit",
+    resize: "none",
+    overflow: "hidden",
+
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-all",
+    overflowWrap: "anywhere",
+};
+
+const editableQuestionTextStyle = {
+    ...editableRawTextBaseStyle,
+    ...questionTextStyle,
+};
+
+const editableExplanationTextStyle = {
+    ...editableRawTextBaseStyle,
+    ...explanationTextStyle,
+};
+
+const editableAnswerTextStyle = {
+    ...editableRawTextBaseStyle,
+    ...answerTextStyle,
+};
+
+const editProblemIconButtonStyle = {
+    position: "absolute",
+    top: 1,
+    right: 1,
+
+    width: 40,
+    height: 40,
+
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+
+    padding: 0,
+    border: "none",
+    borderRadius: 8,
+
+    background: "transparent",
+    color: "var(--color-text-muted, #9ca3af)",
+
+    cursor: "pointer",
+    zIndex: 1,
+};
+
 const modalCardStyle = {
     width: "100%",
     maxWidth: 420,
@@ -678,6 +750,46 @@ function splitTitlePath(titlePathValue) {
     };
 }
 
+function AutoResizeTextarea({
+                                value,
+                                onValueChange,
+                                style,
+                                ariaLabel,
+                            }) {
+    const textareaRef = useRef(null);
+
+    useLayoutEffect(() => {
+        const textarea = textareaRef.current;
+
+        if (!textarea) {
+            return;
+        }
+
+        /*
+         * 기존 높이를 먼저 제거한 뒤 scrollHeight를 적용한다.
+         *
+         * 내용이 길어질 때뿐 아니라 내용을 지웠을 때도
+         * 높이가 자연스럽게 다시 줄어든다.
+         */
+        textarea.style.height = "0px";
+        textarea.style.height = `${textarea.scrollHeight}px`;
+    }, [value]);
+
+    return (
+        <textarea
+            ref={textareaRef}
+            data-prevent-answer-toggle
+            rows={1}
+            value={value}
+            aria-label={ariaLabel}
+            onChange={(event) =>
+                onValueChange(event.target.value)
+            }
+            style={style}
+        />
+    );
+}
+
 export default function QuizPlayPage() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -758,6 +870,19 @@ export default function QuizPlayPage() {
 
     const [bookmarkSubmitting, setBookmarkSubmitting] = useState(false);
     const [bookmarkError, setBookmarkError] = useState("");
+
+    const [isProblemEditing, setIsProblemEditing] = useState(false);
+
+    const [problemEditForm, setProblemEditForm] = useState({
+        questionText: "",
+        explanationText: "",
+        answerText: "",
+    });
+
+    const [problemEditSubmitting, setProblemEditSubmitting] =
+        useState(false);
+
+    const [problemEditError, setProblemEditError] = useState("");
 
     const [timeAdjustModal, setTimeAdjustModal] = useState({
         open: false,
@@ -1020,6 +1145,9 @@ export default function QuizPlayPage() {
             setSubmissionError("");
             setBookmarkError("");
             setTimeAdjustError("");
+            setProblemEditError("");
+            setIsProblemEditing(false);
+            setProblemEditSubmitting(false);
 
             stopAnswerSpeech();
         }
@@ -1365,15 +1493,157 @@ export default function QuizPlayPage() {
         }
     };
 
-    const goEdit = () => {
+    const startProblemEditing = () => {
+        if (
+            isProblemEditing ||
+            problemEditSubmitting ||
+            nextSplashOpen
+        ) {
+            return;
+        }
+
         const problem = problems[currentIndex];
 
         if (!problem?.problemId) {
+            setProblemEditError(
+                "문제 ID가 없어 수정할 수 없습니다."
+            );
             return;
         }
 
         stopAnswerSpeech();
-        navigate(`/quiz/${problem.problemId}/edit`);
+        setShowAnswer(true);
+        setProblemEditError("");
+
+        setProblemEditForm({
+            questionText: problem.questionText ?? "",
+            explanationText: problem.explanationText ?? "",
+            answerText: problem.answerText ?? "",
+        });
+
+        setIsProblemEditing(true);
+    };
+
+    const cancelProblemEditing = () => {
+        if (problemEditSubmitting) {
+            return;
+        }
+
+        const problem = problems[currentIndex];
+
+        setProblemEditForm({
+            questionText: problem?.questionText ?? "",
+            explanationText: problem?.explanationText ?? "",
+            answerText: problem?.answerText ?? "",
+        });
+
+        setProblemEditError("");
+        setIsProblemEditing(false);
+    };
+
+    const handleProblemEditFormChange = (fieldName, value) => {
+        setProblemEditForm((prev) => ({
+            ...prev,
+            [fieldName]: value,
+        }));
+    };
+
+    const saveProblemEdit = async () => {
+        if (problemEditSubmitting) {
+            return;
+        }
+
+        const problem = problems[currentIndex];
+
+        if (!problem?.problemId) {
+            setProblemEditError(
+                "문제 ID가 없어 수정할 수 없습니다."
+            );
+            return;
+        }
+
+        if (!problemEditForm.questionText.trim()) {
+            setProblemEditError(
+                "문제 내용은 비어 있을 수 없습니다."
+            );
+            return;
+        }
+
+        if (!problemEditForm.explanationText.trim()) {
+            setProblemEditError(
+                "해설 내용은 비어 있을 수 없습니다."
+            );
+            return;
+        }
+
+        if (!problemEditForm.answerText.trim()) {
+            setProblemEditError(
+                "정답 내용은 비어 있을 수 없습니다."
+            );
+            return;
+        }
+
+        try {
+            setProblemEditSubmitting(true);
+            setProblemEditError("");
+
+            const updatedProblem = await updateProblem({
+                problemId: problem.problemId,
+                questionText: problemEditForm.questionText,
+                explanationText: problemEditForm.explanationText,
+                answerText: problemEditForm.answerText,
+            });
+
+            setLocalProblems((prev) =>
+                prev.map((item) => {
+                    if (
+                        String(item.problemId) !==
+                        String(updatedProblem.problemId)
+                    ) {
+                        return item;
+                    }
+
+                    return {
+                        ...item,
+                        questionText:
+                        updatedProblem.questionText,
+                        explanationText:
+                        updatedProblem.explanationText,
+                        answerText:
+                        updatedProblem.answerText,
+                    };
+                })
+            );
+
+            setProblemEditForm({
+                questionText: updatedProblem.questionText,
+                explanationText: updatedProblem.explanationText,
+                answerText: updatedProblem.answerText,
+            });
+
+            setIsProblemEditing(false);
+        } catch (error) {
+            console.error("문제 수정 실패:", error);
+
+            const serverMessage =
+                error?.response?.data?.message;
+
+            setProblemEditError(
+                serverMessage ||
+                "문제를 수정하지 못했습니다. 다시 시도해주세요."
+            );
+        } finally {
+            setProblemEditSubmitting(false);
+        }
+    };
+
+    const handleProblemEditButton = async () => {
+        if (!isProblemEditing) {
+            startProblemEditing();
+            return;
+        }
+
+        await saveProblemEdit();
     };
 
     const submitCurrentProblemAndGoNext = async (elapsedSeconds) => {
@@ -1460,6 +1730,8 @@ export default function QuizPlayPage() {
 
     const toggleAnswerByPageClick = (event) => {
         if (submitting) return;
+        if (problemEditSubmitting) return;
+        if (isProblemEditing) return;
         if (timeAdjustModal.open) return;
         if (focusEndModalOpen) return;
         if (nextSplashOpen) return;
@@ -1701,9 +1973,24 @@ export default function QuizPlayPage() {
     );
     const { parentPath, currentTitle } = splitTitlePath(currentTitlePath);
 
-    const isPrevDisabled = currentIndex === 0 || submitting || nextSplashOpen;
-    const isSkipNextDisabled = submitting || nextSplashOpen;
-    const isSubmitNextDisabled = submitting || nextSplashOpen;
+    const isProblemEditLocked =
+        isProblemEditing || problemEditSubmitting;
+
+    const isPrevDisabled =
+        currentIndex === 0 ||
+        submitting ||
+        nextSplashOpen ||
+        isProblemEditLocked;
+
+    const isSkipNextDisabled =
+        submitting ||
+        nextSplashOpen ||
+        isProblemEditLocked;
+
+    const isSubmitNextDisabled =
+        submitting ||
+        nextSplashOpen ||
+        isProblemEditLocked;
 
     return (
         <div
@@ -1753,24 +2040,39 @@ export default function QuizPlayPage() {
 
             <hr style={hrStyle} />
 
-            <div style={{ marginBottom: 16 }}>
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: 6,
-                    }}
-                >
-                    <span style={{ flexShrink: 0, lineHeight: 1.7 }}>💁‍♂</span>
-
+            {!isProblemEditing && (
+                <div style={{ marginBottom: 16 }}>
                     <div
-                        className="quiz-markdown"
-                        style={{ flex: 1, minWidth: 0, ...questionTextStyle }}
+                        style={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: 6,
+                        }}
                     >
-                        <MarkdownContent value={problem.questionText} />
+            <span
+                style={{
+                    flexShrink: 0,
+                    lineHeight: 1.7,
+                }}
+            >
+                💁‍♂
+            </span>
+
+                        <div
+                            className="quiz-markdown"
+                            style={{
+                                flex: 1,
+                                minWidth: 0,
+                                ...questionTextStyle,
+                            }}
+                        >
+                            <MarkdownContent
+                                value={problem.questionText}
+                            />
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {problem.questionImages?.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
@@ -1790,46 +2092,257 @@ export default function QuizPlayPage() {
                 </div>
             )}
 
-            {showAnswer && (
+            {isProblemEditing ? (
                 <div
                     data-prevent-answer-toggle
                     onClick={(event) => event.stopPropagation()}
                 >
-                    <div style={answerCardStyle}>
-                        <div style={{ marginBottom: 20 }}>
-                            <div style={{ marginBottom: 6, fontWeight: 600 }}>해설</div>
+                    <div style={editingProblemCardStyle}>
+                        {/* 문제 제목 */}
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "flex-start",
+                                gap: 6,
+                                marginBottom: 22,
+                            }}
+                        >
+                <span
+                    style={{
+                        flexShrink: 0,
+                        lineHeight: 1.7,
+                    }}
+                >
+                    💁‍♂
+                </span>
 
-                            <div style={explanationTextStyle}>
-                                <MarkdownContent value={problem.explanationText} />
-                            </div>
+                            <AutoResizeTextarea
+                                value={problemEditForm.questionText}
+                                ariaLabel="문제 내용 수정"
+                                onValueChange={(value) =>
+                                    handleProblemEditFormChange(
+                                        "questionText",
+                                        value
+                                    )
+                                }
+                                style={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    ...editableQuestionTextStyle,
+                                }}
+                            />
                         </div>
 
-                        <div>
-                            <div style={{ marginBottom: 6, fontWeight: 600 }}>정답</div>
-
-                            <div style={answerTextStyle}>
-                                <MarkdownContent value={problem.answerText} />
+                        {/* 해설 */}
+                        <div style={{ marginBottom: 22 }}>
+                            <div
+                                style={{
+                                    marginBottom: 8,
+                                    fontWeight: 600,
+                                    fontSize: 16,
+                                    lineHeight: 1.45,
+                                }}
+                            >
+                                해설
                             </div>
+
+                            <AutoResizeTextarea
+                                value={problemEditForm.explanationText}
+                                ariaLabel="문제 해설 수정"
+                                onValueChange={(value) =>
+                                    handleProblemEditFormChange(
+                                        "explanationText",
+                                        value
+                                    )
+                                }
+                                style={editableExplanationTextStyle}
+                            />
+                        </div>
+
+                        {/* 정답 */}
+                        <div>
+                            <div
+                                style={{
+                                    marginBottom: 8,
+                                    fontWeight: 600,
+                                    fontSize: 16,
+                                    lineHeight: 1.45,
+                                }}
+                            >
+                                정답
+                            </div>
+
+                            <AutoResizeTextarea
+                                value={problemEditForm.answerText}
+                                ariaLabel="문제 정답 수정"
+                                onValueChange={(value) =>
+                                    handleProblemEditFormChange(
+                                        "answerText",
+                                        value
+                                    )
+                                }
+                                style={editableAnswerTextStyle}
+                            />
                         </div>
                     </div>
 
                     <div
-                        onClick={(e) => e.stopPropagation()}
+                        data-prevent-answer-toggle
+                        onClick={(event) => event.stopPropagation()}
                         style={{
                             display: "flex",
-                            justifyContent: "flex-end",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: 8,
                             marginTop: -8,
                             marginBottom: 16,
                         }}
                     >
-                        <button
-                            style={getButtonStyle(false)}
-                            onClick={handleSpeakAnswer}
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                            }}
                         >
-                            {isSpeaking ? "읽기 중지" : "정답 읽기"}
+                            <button
+                                type="button"
+                                disabled={problemEditSubmitting}
+                                onClick={handleProblemEditButton}
+                                style={{
+                                    ...getButtonStyle(
+                                        problemEditSubmitting
+                                    ),
+                                    background: "#1d4ed8",
+                                    borderColor: "#3b82f6",
+                                    color: "#f8fafc",
+                                }}
+                            >
+                                {problemEditSubmitting
+                                    ? "수정 중..."
+                                    : "수정 완료"}
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={problemEditSubmitting}
+                                onClick={cancelProblemEditing}
+                                style={getButtonStyle(
+                                    problemEditSubmitting,
+                                    "small"
+                                )}
+                            >
+                                수정 취소
+                            </button>
+                        </div>
+
+                        <button
+                            type="button"
+                            disabled
+                            style={getButtonStyle(true)}
+                        >
+                            정답 읽기
                         </button>
                     </div>
                 </div>
+            ) : (
+                showAnswer && (
+                    <div
+                        data-prevent-answer-toggle
+                        onClick={(event) =>
+                            event.stopPropagation()
+                        }
+                    >
+                        <div
+                            style={{
+                                ...answerCardStyle,
+                                position: "relative",
+                                paddingRight: 54,
+                            }}
+                        >
+                            <button
+                                type="button"
+                                data-prevent-answer-toggle
+                                aria-label="문제 수정"
+                                title="문제 수정"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleProblemEditButton();
+                                }}
+                                style={editProblemIconButtonStyle}
+                            >
+                                <svg
+                                    width="21"
+                                    height="21"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M12 20h9" />
+                                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+                                    <path d="m15 5 3 3" />
+                                </svg>
+                            </button>
+
+                            <div style={{ marginBottom: 20 }}>
+                                <div
+                                    style={{
+                                        marginBottom: 6,
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    해설
+                                </div>
+
+                                <div style={explanationTextStyle}>
+                                    <MarkdownContent
+                                        value={problem.explanationText}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <div
+                                    style={{
+                                        marginBottom: 6,
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    정답
+                                </div>
+
+                                <div style={answerTextStyle}>
+                                    <MarkdownContent
+                                        value={problem.answerText}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            onClick={(event) => event.stopPropagation()}
+                            style={{
+                                display: "flex",
+                                justifyContent: "flex-end",
+                                alignItems: "center",
+                                marginTop: -8,
+                                marginBottom: 16,
+                            }}
+                        >
+                            <button
+                                type="button"
+                                style={getButtonStyle(false)}
+                                onClick={handleSpeakAnswer}
+                            >
+                                {isSpeaking ? "읽기 중지" : "정답 읽기"}
+                            </button>
+                        </div>
+                    </div>
+                )
             )}
 
             {isScratchpadVisible && (
@@ -1845,6 +2358,20 @@ export default function QuizPlayPage() {
                     onStartFocus={handleStartFocus}
                     onStopFocus={handleStopFocus}
                 />
+            )}
+
+            {problemEditError && (
+                <p
+                    data-prevent-answer-toggle
+                    style={{
+                        color: "var(--color-danger, #fca5a5)",
+                        marginTop: 0,
+                        marginBottom: 12,
+                        lineHeight: 1.5,
+                    }}
+                >
+                    {problemEditError}
+                </p>
             )}
 
             {submissionError && (
@@ -1904,7 +2431,11 @@ export default function QuizPlayPage() {
                 <BookmarkToggleButton
                     isBookmarked={!!problem?.meta?.isBookmarked}
                     onClick={handleToggleBookmark}
-                    disabled={bookmarkSubmitting || nextSplashOpen}
+                    disabled={
+                        bookmarkSubmitting ||
+                        nextSplashOpen ||
+                        problemEditSubmitting
+                    }
                 />
             </div>
 
@@ -2062,7 +2593,7 @@ export default function QuizPlayPage() {
 
             <div onClick={(e) => e.stopPropagation()}>
                 <FabGroup
-                    onEdit={goEdit}
+                    onEdit={startProblemEditing}
                     onHome={handleExit}
                     onToggleMusic={toggleMusic}
                     isMusicOn={isMusicOn}

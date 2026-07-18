@@ -122,3 +122,33 @@ export async function getFolderProblemsForCopy(folderId) {
 
     return response.data.result;
 }
+
+export async function updateProblem({
+                                        problemId,
+                                        questionText,
+                                        explanationText,
+                                        answerText,
+                                    }) {
+    if (!problemId) {
+        throw new Error("problemId is required");
+    }
+
+    const response = await apiClient.put(
+        `/api/v1/problems/${problemId}`,
+        {
+            questionText,
+            explanationText,
+            answerText,
+        }
+    );
+
+    const result = response.data.result ?? {};
+
+    return {
+        problemId: result.problemId ?? problemId,
+        questionText: result.questionText ?? questionText,
+        explanationText:
+            result.explanationText ?? explanationText,
+        answerText: result.answerText ?? answerText,
+    };
+}
