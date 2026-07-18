@@ -34,7 +34,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Transactional(readOnly = true)
 public class ExamQuestionSelectionService {
 
-    private static final int SECONDS_PER_PROBLEM = 4 * 60;
+    private static final int SECONDS_PER_MINUTE = 60;
 
     private final FolderRepository folderRepository;
     private final ProblemRepository problemRepository;
@@ -83,13 +83,14 @@ public class ExamQuestionSelectionService {
             }
         }
 
-        int timeLimitSeconds = Math.multiplyExact(
+        int timeLimitSeconds = calculateTimeLimitSeconds(
                 totalProblemCount,
-                SECONDS_PER_PROBLEM
+                request.minutesPerProblem()
         );
 
         return new ExamQuestionCreateResponse(
                 totalProblemCount,
+                request.minutesPerProblem(),
                 timeLimitSeconds,
                 problemResponses
         );
@@ -431,6 +432,16 @@ public class ExamQuestionSelectionService {
             );
         }
 
+        if (request.minutesPerProblem() == null
+                || request.minutesPerProblem() < 1
+                || request.minutesPerProblem() > 10) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "문제당 제한 시간은 1분 이상 10분 이하여야 합니다."
+            );
+        }
+
         for (ExamFolderSelectionRequest selection
                 : request.folderSelections()) {
 
@@ -532,10 +543,7 @@ public class ExamQuestionSelectionService {
             totalProblemCount += selection.problemCount();
         }
 
-        long maximumSafeProblemCount =
-                Integer.MAX_VALUE / SECONDS_PER_PROBLEM;
-
-        if (totalProblemCount > maximumSafeProblemCount) {
+        if (totalProblemCount > Integer.MAX_VALUE) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "요청한 시험 문제 수가 너무 많습니다."
@@ -552,5 +560,27 @@ public class ExamQuestionSelectionService {
                 solvedCount,
                 0
         );
+    }
+
+    private int calculateTimeLimitSeconds(
+            int totalProblemCount,
+            int minutesPerProblem
+    ) {
+        try {
+            int secondsPerProblem = Math.multiplyExact(
+                    minutesPerProblem,
+                    SECONDS_PER_MINUTE
+            );
+
+            return Math.multiplyExact(
+                    totalProblemCount,
+                    secondsPerProblem
+            );
+        } catch (ArithmeticException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "계산된 시험 제한 시간이 너무 큽니다."
+            );
+        }
     }
 }

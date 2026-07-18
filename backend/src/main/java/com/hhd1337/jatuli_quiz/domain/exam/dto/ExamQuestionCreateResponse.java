@@ -4,6 +4,7 @@ import java.util.List;
 
 public record ExamQuestionCreateResponse(
         Integer totalProblemCount,
+        Integer minutesPerProblem,
         Integer timeLimitSeconds,
         List<ExamProblemResponse> problems
 ) {
