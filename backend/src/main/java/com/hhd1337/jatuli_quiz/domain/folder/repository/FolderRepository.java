@@ -36,4 +36,17 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 
     List<Folder> findAllByParentFolder_FolderId(Long parentFolderId);
 
+    @Query("""
+            select f
+            from Folder f
+            where lower(f.name) like lower(concat('%', :query, '%'))
+              and not exists (
+                  select 1
+                  from Folder child
+                  where child.parentFolder = f
+              )
+            order by f.name asc
+            """)
+    List<Folder> searchLeafFoldersByName(@Param("query") String query);
+
 }

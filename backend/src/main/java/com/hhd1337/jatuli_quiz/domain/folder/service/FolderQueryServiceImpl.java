@@ -4,6 +4,7 @@ import com.hhd1337.jatuli_quiz.common.exception.GeneralException;
 import com.hhd1337.jatuli_quiz.common.exception.code.status.ErrorStatus;
 import com.hhd1337.jatuli_quiz.common.exception.handler.FolderHandler;
 import com.hhd1337.jatuli_quiz.domain.folder.converter.FolderConverter;
+import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.FolderChildrenResponse;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.PracticeProblemDto;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.PracticeResponse;
@@ -103,6 +104,26 @@ public class FolderQueryServiceImpl implements FolderQueryService {
                 .toList();
 
         return FolderConverter.toPracticeResponse(SELECTION_RULE_ALL, problemDtos);
+    }
+
+    @Override
+    public FolderResponse.FolderSearchResponse searchLeafFolders(String query) {
+        String trimmedQuery = query == null ? "" : query.trim();
+
+        if (trimmedQuery.isEmpty()) {
+            return FolderConverter.toFolderSearchResponse(List.of());
+        }
+
+        List<Folder> folders = folderRepository.searchLeafFoldersByName(trimmedQuery);
+
+        List<FolderResponse.FolderSearchResponse.FolderSearchItem> items = folders.stream()
+                .map(folder -> FolderConverter.toFolderSearchItem(
+                        folder,
+                        problemRepository.countByFolder(folder)
+                ))
+                .toList();
+
+        return FolderConverter.toFolderSearchResponse(items);
     }
 
     private record FolderStats(int total, int solved) {

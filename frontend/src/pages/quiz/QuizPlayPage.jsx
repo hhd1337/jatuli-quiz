@@ -26,6 +26,7 @@ import {
     toggleProblemBookmark,
     updateProblem,
 } from "../../shared/api/quizApi";
+import { removeFromDefenseQueue } from "../../shared/api/defenseQueueApi";
 import FabGroup from "../../features/fab/FabGroup";
 import MarkdownContent from "../../shared/components/MarkdownContent";
 
@@ -830,6 +831,14 @@ export default function QuizPlayPage() {
     const isUnsupportedMode =
         !!mode && !isBookmarkMode && !isRandomMode && !isFolderMode;
 
+    /**
+     * 디펜스 모드는 항상 폴더별 문제풀이 위에서 동작한다.
+     * 문제 조회/진행 포인터는 기존 폴더별 문제풀이 로직을 그대로 재사용하고,
+     * 마지막 문제를 완료했을 때의 흐름만 디펜스 대기 큐 처리로 분기시킨다.
+     */
+    const isDefenseMode =
+        isFolderPracticeMode && searchParams.get("defense") === "true";
+
     const initialTitlePath = location.state?.titlePath ?? "";
 
     const [localProblems, setLocalProblems] = useState([]);
@@ -837,6 +846,7 @@ export default function QuizPlayPage() {
     const [error, setError] = useState("");
     const [titlePath, setTitlePath] = useState(initialTitlePath);
     const [showCompleteScreen, setShowCompleteScreen] = useState(false);
+    const [defenseResult, setDefenseResult] = useState(null);
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
@@ -997,6 +1007,7 @@ export default function QuizPlayPage() {
                 setError("");
                 setLocalProblems([]);
                 setShowCompleteScreen(false);
+                setDefenseResult(null);
                 setCurrentIndex(0);
                 setShowAnswer(false);
                 setSubmissionError("");
@@ -1365,6 +1376,56 @@ export default function QuizPlayPage() {
         return "홈으로";
     };
 
+    const handleDefenseEnd = () => {
+        stopAnswerSpeech();
+        navigate("/");
+    };
+
+    const handleContinueDefense = () => {
+        const nextFolder = defenseResult?.nextFolder;
+
+        if (!nextFolder) return;
+
+        stopAnswerSpeech();
+
+        navigate(
+            `/quiz/play?mode=folder&folderId=${nextFolder.folderId}&defense=true`,
+            {
+                state: {
+                    titlePath: nextFolder.folderFullPath,
+                },
+            }
+        );
+    };
+
+    /**
+     * 디펜스 모드에서 현재 폴더의 마지막 문제까지 완료했을 때 호출한다.
+     *
+     * 대기 큐에서 이 폴더를 제거하는 시점은 완료 화면에서 어떤 버튼을
+     * 누르는지와 무관하게, 마지막 문제를 끝낸 바로 이 시점이다.
+     */
+    const completeDefenseFolder = async () => {
+        const completedFolderName = splitTitlePath(titlePath).currentTitle;
+
+        try {
+            const queue = await removeFromDefenseQueue(Number(folderId));
+
+            setDefenseResult({
+                completedFolderName,
+                nextFolder: queue.entries[0] ?? null,
+            });
+        } catch (err) {
+            console.error("디펜스 대기 큐 제거 실패:", err);
+
+            // 큐 정리에 실패해도 완료 자체는 진행한다.
+            // (다음에 다시 진입하면 이 폴더가 대기 큐에 남아 있을 수 있다)
+            setDefenseResult({
+                completedFolderName,
+                nextFolder: null,
+            });
+        }
+    };
+
     const getEmptyMessage = () => {
         if (isBookmarkMode) {
             return "이번 북마크 순회에서 풀 문제가 없습니다.";
@@ -1385,7 +1446,7 @@ export default function QuizPlayPage() {
         return "이 폴더의 문제를 끝까지 모두 확인했어요.";
     };
 
-    const goNext = () => {
+    const goNext = async () => {
         stopAnswerSpeech();
         resetFocusSession();
 
@@ -1393,6 +1454,12 @@ export default function QuizPlayPage() {
 
         if (next >= problems.length) {
             setShowAnswer(false);
+
+            if (isDefenseMode && folderId) {
+                await completeDefenseFolder();
+                return;
+            }
+
             setShowCompleteScreen(true);
             return;
         }
@@ -2030,6 +2097,67 @@ export default function QuizPlayPage() {
             <div style={pageStyle}>
                 <h1 style={{ margin: 0 }}>{titlePath || "문제 풀이"}</h1>
                 <p style={mutedTextStyle}>{getEmptyMessage()}</p>
+            </div>
+        );
+    }
+
+    if (defenseResult) {
+        const { completedFolderName, nextFolder } = defenseResult;
+
+        return (
+            <div
+                style={{
+                    ...pageStyle,
+                    minHeight: "60vh",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    textAlign: "center",
+                    gap: 16,
+                }}
+            >
+                <div style={{ fontSize: 64 }}>🛡️</div>
+                <h1 style={{ margin: 0 }}>{completedFolderName} 방어 완료</h1>
+                <p style={mutedTextStyle}>
+                    {completedFolderName} 디펜스에 성공하셨습니다!! 축하합니다!!
+                </p>
+
+                {nextFolder ? (
+                    <>
+                        <p style={mutedTextStyle}>
+                            다음 방어 대상은 {nextFolder.folderName}입니다.
+                        </p>
+
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <button
+                                style={getButtonStyle(false)}
+                                onClick={handleDefenseEnd}
+                            >
+                                디펜스 종료
+                            </button>
+                            <button
+                                style={getButtonStyle(false)}
+                                onClick={handleContinueDefense}
+                            >
+                                {nextFolder.folderName} 계속 풀기
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <p style={mutedTextStyle}>
+                            대기 중인 모든 폴더의 디펜스를 완료했습니다!
+                        </p>
+
+                        <button
+                            style={getButtonStyle(false)}
+                            onClick={handleDefenseEnd}
+                        >
+                            홈으로
+                        </button>
+                    </>
+                )}
             </div>
         );
     }

@@ -104,6 +104,25 @@ public class FolderResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    public static class FolderSearchResponse {
+        private List<FolderSearchItem> folders;
+
+        @Getter
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class FolderSearchItem {
+            private Long folderId;
+            private String name;
+            private String fullPath;
+            private Integer totalProblemCount;
+        }
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class ReorderFoldersResponse {
         private Long parentFolderId;
         private List<ReorderedFolderDTO> folders;

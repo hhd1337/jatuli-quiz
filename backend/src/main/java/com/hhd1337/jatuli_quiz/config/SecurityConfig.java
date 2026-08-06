@@ -160,6 +160,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/folders/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/folders/**").authenticated()
 
+                        // 디펜스 대기 큐 데이터 변경 API 보호
+                        .requestMatchers(HttpMethod.POST, "/api/v1/defense-queue").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/defense-queue/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/defense-queue/**").authenticated()
+
                         // 시험보기 API - 개발 단계 Swagger 테스트용 임시 허용
                         .requestMatchers(
                                 HttpMethod.POST,

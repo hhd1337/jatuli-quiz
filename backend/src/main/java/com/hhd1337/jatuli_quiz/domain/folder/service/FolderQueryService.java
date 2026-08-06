@@ -6,4 +6,6 @@ public interface FolderQueryService {
     FolderResponse.FolderChildrenResponse getChildren(Long folderId);
 
     FolderResponse.PracticeResponse getPracticeProblems(Long folderId);
+
+    FolderResponse.FolderSearchResponse searchLeafFolders(String query);
 }

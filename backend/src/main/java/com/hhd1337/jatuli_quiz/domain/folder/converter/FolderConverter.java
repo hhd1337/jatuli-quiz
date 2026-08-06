@@ -102,6 +102,26 @@ public class FolderConverter {
                 .build();
     }
 
+    public static FolderResponse.FolderSearchResponse.FolderSearchItem toFolderSearchItem(
+            Folder folder,
+            int totalProblemCount
+    ) {
+        return FolderResponse.FolderSearchResponse.FolderSearchItem.builder()
+                .folderId(folder.getFolderId())
+                .name(folder.getName())
+                .fullPath(folder.getFullPath())
+                .totalProblemCount(totalProblemCount)
+                .build();
+    }
+
+    public static FolderResponse.FolderSearchResponse toFolderSearchResponse(
+            List<FolderResponse.FolderSearchResponse.FolderSearchItem> items
+    ) {
+        return FolderResponse.FolderSearchResponse.builder()
+                .folders(items)
+                .build();
+    }
+
     public static FolderResponse.ReorderFoldersResponse toReorderFoldersResponse(
             Long parentFolderId,
             List<Folder> folders
