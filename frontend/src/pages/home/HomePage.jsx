@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { getHomeData } from "../../shared/api/homeApi";
 import { getAuthStatus, logout } from "../../shared/api/authApi";
 import ExamEntryCard from "../exam/ExamEntryCard.jsx";
+import DefenseEntryCard from "../defense/DefenseEntryCard.jsx";
+import { addToDefenseQueue } from "../../shared/api/defenseQueueApi";
 
 import {
     createFolder,
@@ -438,6 +440,7 @@ function FolderTreeItem({
                             onRenameFolder,
                             onDeleteFolder,
                             onMoveFolder,
+                            onAddToDefenseQueue,
 
                             creatingParentFolder,
                             newFolderName,
@@ -662,6 +665,22 @@ function FolderTreeItem({
                                         </button>
                                     )}
 
+                                    {isPlayableLeaf && (
+                                        <button
+                                            type="button"
+                                            onClick={() => onAddToDefenseQueue(folder)}
+                                            disabled={submitting}
+                                            style={{
+                                                ...folderActionButtonStyle,
+                                                width: "100%",
+                                                borderRadius: 8,
+                                                justifyContent: "center",
+                                            }}
+                                        >
+                                            디펜스 대기 큐에 추가
+                                        </button>
+                                    )}
+
                                     <button
                                         type="button"
                                         onClick={() => onRenameFolder(folder)}
@@ -813,6 +832,7 @@ function FolderTreeItem({
                             onRenameFolder={onRenameFolder}
                             onDeleteFolder={onDeleteFolder}
                             onMoveFolder={onMoveFolder}
+                            onAddToDefenseQueue={onAddToDefenseQueue}
 
                             creatingParentFolder={creatingParentFolder}
                             newFolderName={newFolderName}
@@ -1170,6 +1190,22 @@ export default function HomePage() {
         } catch (err) {
             console.error("폴더 삭제 실패:", err);
             alert(getApiErrorMessage(err, "폴더 삭제에 실패했습니다."));
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function handleAddToDefenseQueue(folder) {
+        try {
+            setSubmitting(true);
+            setOpenedMenuFolderId(null);
+
+            await addToDefenseQueue(folder.folderId);
+
+            alert(`'${folder.name}' 폴더를 디펜스 대기 큐에 추가했습니다.`);
+        } catch (err) {
+            console.error("디펜스 대기 큐 추가 실패:", err);
+            alert(getApiErrorMessage(err, "디펜스 대기 큐 추가에 실패했습니다."));
         } finally {
             setSubmitting(false);
         }
@@ -1643,6 +1679,11 @@ export default function HomePage() {
                 <ExamEntryCard navigate={navigate} />
             </section>
 
+            {/* ================== 문제 디펜스 ================== */}
+            <section style={sectionStyle}>
+                <DefenseEntryCard />
+            </section>
+
             {/* ================== 전체 문제 ================== */}
             <section style={sectionStyle}>
 
@@ -1768,6 +1809,7 @@ export default function HomePage() {
                                     onRenameFolder={handleRenameFolder}
                                     onDeleteFolder={handleDeleteFolder}
                                     onMoveFolder={handleMoveFolder}
+                                    onAddToDefenseQueue={handleAddToDefenseQueue}
 
                                     creatingParentFolder={creatingParentFolder}
                                     newFolderName={newFolderName}
