@@ -49,6 +49,9 @@ public class HomeResponse {
         private Integer solvedProblemCount;
         private Integer totalProblemCount;
 
+        // 리프 폴더 소속 문제들의 solvedCount 중 최솟값(= 완주 횟수). 리프가 아니면 0.
+        private Integer completedRoundCount;
+
         // 하위 폴더가 없으면 true
         private Boolean leaf;
 

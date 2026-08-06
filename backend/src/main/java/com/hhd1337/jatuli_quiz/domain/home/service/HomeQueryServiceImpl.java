@@ -158,10 +158,15 @@ public class HomeQueryServiceImpl implements HomeQueryService {
 
         boolean leaf = childFolders.isEmpty();
 
+        int completedRoundCount = leaf
+                ? getCompletedRoundCount(folder)
+                : 0;
+
         HomeResponse.RootFolderItem item = HomeConverter.toRootFolderItem(
                 folder,
                 solvedProblemCount,
                 totalProblemCount,
+                completedRoundCount,
                 leaf,
                 children
         );
@@ -170,6 +175,11 @@ public class HomeQueryServiceImpl implements HomeQueryService {
                 item,
                 new FolderStats(totalProblemCount, solvedProblemCount)
         );
+    }
+
+    private int getCompletedRoundCount(Folder folder) {
+        Integer minSolvedCount = problemRepository.findMinSolvedCountByFolder(folder);
+        return minSolvedCount == null ? 0 : minSolvedCount;
     }
 
     private record FolderTreeBuildResult(

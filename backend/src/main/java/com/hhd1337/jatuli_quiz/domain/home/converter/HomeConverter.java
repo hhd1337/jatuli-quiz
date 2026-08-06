@@ -56,6 +56,7 @@ public class HomeConverter {
             Folder folder,
             int solvedProblemCount,
             int totalProblemCount,
+            int completedRoundCount,
             boolean leaf,
             List<HomeResponse.RootFolderItem> children
     ) {
@@ -64,6 +65,7 @@ public class HomeConverter {
                 .name(folder.getName())
                 .solvedProblemCount(solvedProblemCount)
                 .totalProblemCount(totalProblemCount)
+                .completedRoundCount(completedRoundCount)
                 .leaf(leaf)
                 .children(children)
                 .build();
