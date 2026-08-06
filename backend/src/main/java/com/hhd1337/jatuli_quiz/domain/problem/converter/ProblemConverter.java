@@ -4,6 +4,7 @@ import com.hhd1337.jatuli_quiz.domain.folder.entity.Folder;
 import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemBookmarkResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemCopyResponse;
+import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemDeleteResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemUpdateResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
@@ -120,6 +121,16 @@ public class ProblemConverter {
                 .folderId(folder.getFolderId())
                 .folderName(folder.getName())
                 .folderPath(folder.getFullPath())
+                .build();
+    }
+
+    public static ProblemDeleteResponse.DeleteProblemResponse toDeleteProblemResponse(
+            Long problemId,
+            Long folderId
+    ) {
+        return ProblemDeleteResponse.DeleteProblemResponse.builder()
+                .problemId(problemId)
+                .folderId(folderId)
                 .build();
     }
 }

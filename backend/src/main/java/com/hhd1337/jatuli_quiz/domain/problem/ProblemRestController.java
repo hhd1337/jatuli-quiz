@@ -5,6 +5,7 @@ import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeRequest;
 import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemBookmarkResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemCopyResponse;
+import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemDeleteResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportRequest;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemUpdateRequest;
@@ -14,6 +15,7 @@ import com.hhd1337.jatuli_quiz.domain.problem.service.ProblemQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -68,6 +70,27 @@ public class ProblemRestController {
         return ApiResponse.onSuccess(
                 problemCommandService.updateProblem(problemId, request)
         );
+    }
+
+    @Operation(
+            summary = "문제 삭제",
+            description = """
+                    문제 ID를 기준으로 문제를 삭제합니다.
+
+                    삭제 시 해당 문제의 ProblemSubmission(풀이 기록)도 함께 삭제됩니다.
+                    삭제된 문제가 속한 폴더의 문제 수(problemCount)가 함께 감소하며,
+                    삭제된 문제가 그 폴더의 문제풀이 진행 포인터(다음 문제)로 지정되어
+                    있었다면 남은 문제 기준으로 포인터가 재조정됩니다.
+
+                    요청한 problemId에 해당하는 문제가 존재하지 않으면 예외를 반환합니다.
+                    이미지·첨부파일 삭제는 이번 API의 범위에 포함되지 않습니다.
+                    """
+    )
+    @DeleteMapping("/{problemId}")
+    public ApiResponse<ProblemDeleteResponse.DeleteProblemResponse> deleteProblem(
+            @PathVariable Long problemId
+    ) {
+        return ApiResponse.onSuccess(problemCommandService.deleteProblem(problemId));
     }
 
     @Operation(

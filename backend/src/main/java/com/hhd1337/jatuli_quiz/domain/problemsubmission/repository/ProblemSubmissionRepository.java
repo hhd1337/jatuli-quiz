@@ -1,5 +1,6 @@
 package com.hhd1337.jatuli_quiz.domain.problemsubmission.repository;
 
+import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
 import com.hhd1337.jatuli_quiz.domain.problemsubmission.entity.ProblemSubmission;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -8,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ProblemSubmissionRepository extends JpaRepository<ProblemSubmission, Long> {
+
+    void deleteAllByProblem(Problem problem);
 
     @Query("""
             select distinct ps.problem.problemId

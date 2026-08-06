@@ -91,6 +91,14 @@ public class Folder {
         this.problemCount += count;
     }
 
+    public void decreaseProblemCount(int count) {
+        if (this.problemCount == null) {
+            this.problemCount = 0;
+            return;
+        }
+        this.problemCount = Math.max(0, this.problemCount - count);
+    }
+
     public void rename(String name) {
         this.name = name;
         this.fullPath = buildFullPath(this.parentFolder, name);
