@@ -242,12 +242,14 @@ function formatCountdown(totalSeconds) {
     )}`;
 }
 
+const PAGE_BASE_BOTTOM_PADDING = "72px";
+
 const pageStyle = {
     width: "100%",
     maxWidth: 800,
     minHeight: "100dvh",
     margin: "0 auto",
-    padding: "24px clamp(8px, 3vw, 20px) 72px",
+    padding: `24px clamp(8px, 3vw, 20px) ${PAGE_BASE_BOTTOM_PADDING}`,
     color: "var(--color-text, #f9fafb)",
     boxSizing: "border-box",
 };
@@ -273,20 +275,65 @@ const answerCardStyle = {
     marginBottom: 16,
 };
 
+/**
+ * 연습장 하단시트의 좌우 여백.
+ * pageStyle(maxWidth 800)과 동일한 중앙 정렬 기준을 따른다.
+ */
+const SCRATCHPAD_SHEET_SIDE_INSET =
+    "max(8px, calc((100vw - 800px) / 2 + 8px))";
+
 const scratchpadCardStyle = {
-    width: "100%",
+    position: "fixed",
+    left: SCRATCHPAD_SHEET_SIDE_INSET,
+    right: SCRATCHPAD_SHEET_SIDE_INSET,
+    bottom: "calc(20px + env(safe-area-inset-bottom) + 60px)",
+    zIndex: 950,
+    maxHeight: "calc(100vh - 32px)",
+    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
     boxSizing: "border-box",
     border: "1px solid var(--color-border, #374151)",
+    borderBottom: "none",
     background: "var(--color-surface, #1f2937)",
     color: "var(--color-text, #f9fafb)",
-    borderRadius: 12,
-    padding: 11,
-    marginBottom: 20,
+    borderRadius: "16px 16px 0 0",
+    padding: 14,
+    boxShadow: "0 -10px 30px rgba(0, 0, 0, 0.4)",
+};
+
+const SCRATCHPAD_TEXTAREA_DEFAULT_HEIGHT = 300;
+const SCRATCHPAD_TEXTAREA_MIN_HEIGHT = 120;
+const SCRATCHPAD_TEXTAREA_MAX_HEIGHT = 2000;
+
+/**
+ * 연습장 카드 맨 위 경계선에 겹쳐 놓는 드래그 핸들.
+ * 카드 아래쪽 경계(bottom)는 고정된 채로, 이 핸들을 위아래로 드래그하면
+ * textarea 높이만 늘었다 줄었다 한다.
+ */
+const scratchpadResizeHandleStyle = {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 12,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "ns-resize",
+    touchAction: "none",
+};
+
+const scratchpadResizeHandleBarStyle = {
+    width: 40,
+    height: 4,
+    borderRadius: 999,
+    background: "var(--color-border, #374151)",
 };
 
 const scratchpadTextareaStyle = {
     width: "100%",
-    minHeight: 240,
+    flexShrink: 0,
     boxSizing: "border-box",
     padding: 10,
     marginTop: 4,
@@ -296,13 +343,13 @@ const scratchpadTextareaStyle = {
     color: "var(--color-text, #f9fafb)",
     fontSize: 15,
     lineHeight: 1.6,
-    resize: "vertical",
+    resize: "none",
     outline: "none",
 };
 
 const focusProgressTrackStyle = {
     width: "100%",
-    height: 12,
+    height: 9,
     overflow: "hidden",
     borderRadius: 999,
     background: "rgba(127, 29, 29, 0.3)",
@@ -476,7 +523,7 @@ const bottomLeftControlsStyle = {
     bottom: bottomActionBottom,
     display: "flex",
     gap: 8,
-    zIndex: 900,
+    zIndex: 960,
 };
 
 const bottomBookmarkStyle = {
@@ -488,7 +535,7 @@ const bottomBookmarkStyle = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 901,
+    zIndex: 961,
 };
 
 const NEXT_SPLASH_DURATION_MS = 3200;
@@ -854,6 +901,98 @@ export default function QuizPlayPage() {
     const [isScratchpadVisible, setIsScratchpadVisible] = useState(
         readScratchpadVisible
     );
+
+    const scratchpadResizeObserverRef = useRef(null);
+    const [scratchpadPanelHeight, setScratchpadPanelHeight] = useState(0);
+
+    /**
+     * 연습장 하단시트 DOM 노드가 실제로 붙거나 떨어지는 시점에 맞춰
+     * 높이를 추적하는 콜백 ref. useEffect + 일반 ref 조합으로는
+     * 로딩 화면을 거쳐 뒤늦게 마운트되는 경우 타이밍이 어긋나서
+     * 콜백 ref로 직접 처리한다.
+     */
+    const scratchpadPanelRef = useCallback((node) => {
+        if (scratchpadResizeObserverRef.current) {
+            scratchpadResizeObserverRef.current.disconnect();
+            scratchpadResizeObserverRef.current = null;
+        }
+
+        if (!node) {
+            setScratchpadPanelHeight(0);
+            return;
+        }
+
+        setScratchpadPanelHeight(node.offsetHeight);
+
+        if (typeof ResizeObserver === "undefined") {
+            return;
+        }
+
+        const observer = new ResizeObserver(() => {
+            setScratchpadPanelHeight(node.offsetHeight);
+        });
+
+        observer.observe(node);
+        scratchpadResizeObserverRef.current = observer;
+    }, []);
+
+    const [scratchpadTextareaHeight, setScratchpadTextareaHeight] = useState(
+        SCRATCHPAD_TEXTAREA_DEFAULT_HEIGHT
+    );
+
+    const scratchpadResizeDragRef = useRef(null);
+
+    const handleScratchpadResizeMove = useCallback((event) => {
+        const drag = scratchpadResizeDragRef.current;
+
+        if (!drag) return;
+
+        // 위쪽 경계를 위로 끌면(clientY가 작아지면) 높이가 늘어난다.
+        const deltaY = drag.startY - event.clientY;
+
+        const nextHeight = Math.min(
+            Math.max(
+                drag.startHeight + deltaY,
+                SCRATCHPAD_TEXTAREA_MIN_HEIGHT
+            ),
+            SCRATCHPAD_TEXTAREA_MAX_HEIGHT
+        );
+
+        setScratchpadTextareaHeight(nextHeight);
+    }, []);
+
+    const handleScratchpadResizeEnd = useCallback(() => {
+        scratchpadResizeDragRef.current = null;
+        window.removeEventListener("pointermove", handleScratchpadResizeMove);
+        window.removeEventListener("pointerup", handleScratchpadResizeEnd);
+    }, [handleScratchpadResizeMove]);
+
+    const handleScratchpadResizeStart = useCallback(
+        (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            scratchpadResizeDragRef.current = {
+                startY: event.clientY,
+                startHeight: scratchpadTextareaHeight,
+            };
+
+            window.addEventListener("pointermove", handleScratchpadResizeMove);
+            window.addEventListener("pointerup", handleScratchpadResizeEnd);
+        },
+        [
+            scratchpadTextareaHeight,
+            handleScratchpadResizeMove,
+            handleScratchpadResizeEnd,
+        ]
+    );
+
+    useEffect(() => {
+        return () => {
+            window.removeEventListener("pointermove", handleScratchpadResizeMove);
+            window.removeEventListener("pointerup", handleScratchpadResizeEnd);
+        };
+    }, [handleScratchpadResizeMove, handleScratchpadResizeEnd]);
 
     const [scratchpadDrafts, setScratchpadDrafts] = useState(
         readScratchpadDrafts
@@ -2217,7 +2356,12 @@ export default function QuizPlayPage() {
 
     return (
         <div
-            style={pageStyle}
+            style={{
+                ...pageStyle,
+                paddingBottom: isScratchpadVisible
+                    ? `calc(${PAGE_BASE_BOTTOM_PADDING} + ${scratchpadPanelHeight}px + 16px)`
+                    : PAGE_BASE_BOTTOM_PADDING,
+            }}
             onClick={toggleAnswerByPageClick}
         >
             <div
@@ -2622,6 +2766,9 @@ export default function QuizPlayPage() {
                     value={currentScratchpadDraft}
                     onChange={handleScratchpadChange}
                     onHide={handleHideScratchpad}
+                    rootRef={scratchpadPanelRef}
+                    textareaHeight={scratchpadTextareaHeight}
+                    onResizeStart={handleScratchpadResizeStart}
                     isFocusActive={isFocusActive}
                     focusDurationMinutes={focusDurationMinutes}
                     focusDurationSeconds={focusDurationSeconds}
@@ -2902,6 +3049,9 @@ function AnswerScratchpad({
                               value,
                               onChange,
                               onHide,
+                              rootRef,
+                              textareaHeight,
+                              onResizeStart,
                               isFocusActive,
                               focusDurationMinutes,
                               focusDurationSeconds,
@@ -2920,22 +3070,36 @@ function AnswerScratchpad({
 
     return (
         <section
+            ref={rootRef}
             data-prevent-answer-toggle
             onClick={(event) => event.stopPropagation()}
             style={scratchpadCardStyle}
         >
+            <div
+                data-prevent-answer-toggle
+                role="separator"
+                aria-orientation="horizontal"
+                aria-label="연습장 높이 조절"
+                onPointerDown={onResizeStart}
+                style={scratchpadResizeHandleStyle}
+            >
+                <div style={scratchpadResizeHandleBarStyle} />
+            </div>
+
             <div
                 style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
                     gap: 16,
+                    flexShrink: 0,
                 }}
             >
                 <h2
                     style={{
                         margin: 0,
-                        fontSize: 17,
+                        fontSize: 16,
+                        fontWeight: 800,
                         lineHeight: 1.3,
                     }}
                 >
@@ -3018,8 +3182,9 @@ function AnswerScratchpad({
             {isFocusActive && (
                 <div
                     style={{
-                        marginTop: 16,
-                        marginBottom: 4,
+                        marginTop: 14,
+                        marginBottom: 6,
+                        flexShrink: 0,
                     }}
                 >
                     <div
@@ -3034,7 +3199,7 @@ function AnswerScratchpad({
                             style={{
                                 fontSize: 13,
                                 fontWeight: 700,
-                                color: "#fca5a5",
+                                color: "#f87171",
                             }}
                         >
                             {focusDurationMinutes}분 집중
@@ -3044,7 +3209,7 @@ function AnswerScratchpad({
                             style={{
                                 fontSize: 18,
                                 fontVariantNumeric: "tabular-nums",
-                                color: "#f87171",
+                                color: "#fca5a5",
                             }}
                         >
                             {formatCountdown(
@@ -3066,7 +3231,7 @@ function AnswerScratchpad({
                                 width: `${progressPercent}%`,
                                 height: "100%",
                                 borderRadius: 999,
-                                background: "#ef4444",
+                                background: "#b91c1c",
                                 transition: "width 0.25s linear",
                             }}
                         />
@@ -3080,7 +3245,10 @@ function AnswerScratchpad({
                     onChange(event.target.value)
                 }
                 placeholder="문제를 보고 생각한 내용을 자유롭게 작성하세요."
-                style={scratchpadTextareaStyle}
+                style={{
+                    ...scratchpadTextareaStyle,
+                    height: textareaHeight,
+                }}
             />
         </section>
     );
