@@ -34,17 +34,40 @@ function toNonNegativeNumber(value, fallback = 0) {
     return Math.max(0, Math.floor(numberValue));
 }
 
+export function getLeafFolderStatus({ leaf, solvedCount, totalCount, completedRoundCount }) {
+    if (!leaf || !totalCount || totalCount <= 0) {
+        return null;
+    }
+
+    if (!solvedCount || solvedCount <= 0) {
+        return "NOT_STARTED";
+    }
+
+    if (!completedRoundCount || completedRoundCount <= 0) {
+        return "IN_PROGRESS";
+    }
+
+    return "COMPLETED";
+}
+
 function normalizeFolderTree(folder) {
     const children = Array.isArray(folder?.children)
         ? folder.children.map(normalizeFolderTree)
         : [];
 
+    const leaf = Boolean(folder?.leaf);
+    const solvedCount = folder?.solvedProblemCount ?? 0;
+    const totalCount = folder?.totalProblemCount ?? 0;
+    const completedRoundCount = folder?.completedRoundCount ?? 0;
+
     return {
         folderId: folder?.folderId,
         name: folder?.name ?? "",
-        solvedCount: folder?.solvedProblemCount ?? 0,
-        totalCount: folder?.totalProblemCount ?? 0,
-        leaf: Boolean(folder?.leaf),
+        solvedCount,
+        totalCount,
+        completedRoundCount,
+        leaf,
+        status: getLeafFolderStatus({ leaf, solvedCount, totalCount, completedRoundCount }),
         children,
     };
 }

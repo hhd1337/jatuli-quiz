@@ -16,6 +16,9 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
     int countByFolderAndSolvedCountGreaterThan(Folder folder, Integer solvedCount);
 
+    @Query("select coalesce(min(p.solvedCount), 0) from Problem p where p.folder = :folder")
+    Integer findMinSolvedCountByFolder(@Param("folder") Folder folder);
+
     List<Problem> findAllByFolder_FolderIdOrderByProblemNumAsc(Long folderId);
 
     @Query("select coalesce(sum(p.solvedCount), 0) from Problem p")

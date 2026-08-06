@@ -405,7 +405,17 @@ function MetricCard({ label, value, description, valueColor = "var(--color-text)
 
 function getFolderIcon(folder, isCollapsed) {
     if (folder.leaf) {
-        return folder.totalCount > 0 ? "🔘" : "◌";
+        switch (folder.status) {
+            case "NOT_STARTED":
+                return "○";
+            case "IN_PROGRESS":
+                return "◔";
+            case "COMPLETED":
+                return "●";
+            default:
+                // 빈 리프 폴더(문제가 하나도 없는 경우)는 아이콘 없이 표시한다.
+                return "";
+        }
     }
 
     return isCollapsed ? "🗂️" : "🗂️";
@@ -525,6 +535,8 @@ function FolderTreeItem({
 
                         <strong
                             style={{
+                                flex: "1 1 auto",
+                                minWidth: 0,
                                 fontSize: depth === 0 ? 17 : 15,
                                 fontWeight: depth === 0 ? 800 : 700,
                                 overflow: "hidden",
@@ -542,10 +554,19 @@ function FolderTreeItem({
                                     color: "var(--color-primary)",
                                     fontSize: 11,
                                     fontWeight: 400,
+                                    whiteSpace: "nowrap",
                                 }}
                             >
-                            {folder.totalCount}문제
-                        </span>
+                                {folder.totalCount}문제
+                                {folder.completedRoundCount >= 1 && (
+                                    <>
+                                        {" · "}
+                                        <span style={{ color: "#3b82f6" }}>
+                                            ×{folder.completedRoundCount}
+                                        </span>
+                                    </>
+                                )}
+                            </span>
                         )}
                     </div>
                 </button>
