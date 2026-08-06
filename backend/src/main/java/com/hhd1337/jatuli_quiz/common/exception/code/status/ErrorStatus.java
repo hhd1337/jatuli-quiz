@@ -31,7 +31,14 @@ public enum ErrorStatus implements BaseErrorCode {
     PROBLEM_TEXT_PARSE_FAILED(HttpStatus.BAD_REQUEST, "PROBLEM4001", "문제 문자열 파싱에 실패했습니다."),
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "PROBLEM4002", "잘못된 문제 입력입니다."),
     PROBLEM_IMPORT_TARGET_NOT_LEAF(HttpStatus.BAD_REQUEST, "PROBLEM4003", "문제 일괄 등록은 leaf 폴더에만 가능합니다."),
-    BOOKMARKED_PROBLEM_NOT_FOUND(HttpStatus.NOT_FOUND, "PROBLEM4004", "북마크된 문제가 존재하지 않습니다.");
+    BOOKMARKED_PROBLEM_NOT_FOUND(HttpStatus.NOT_FOUND, "PROBLEM4004", "북마크된 문제가 존재하지 않습니다."),
+
+    // 디펜스 대기 큐 관련 에러
+    DEFENSE_QUEUE_FOLDER_NOT_LEAF(HttpStatus.BAD_REQUEST, "DEFENSE4001", "리프 폴더만 디펜스 대기 큐에 등록할 수 있습니다."),
+    DEFENSE_QUEUE_FOLDER_EMPTY(HttpStatus.BAD_REQUEST, "DEFENSE4002", "문제가 없는 폴더는 디펜스 대기 큐에 등록할 수 없습니다."),
+    DEFENSE_QUEUE_ALREADY_REGISTERED(HttpStatus.BAD_REQUEST, "DEFENSE4003", "이미 디펜스 대기 큐에 등록된 폴더입니다."),
+    DEFENSE_QUEUE_ENTRY_NOT_FOUND(HttpStatus.NOT_FOUND, "DEFENSE4041", "디펜스 대기 큐에 등록되지 않은 폴더입니다."),
+    DEFENSE_QUEUE_INVALID_ORDER(HttpStatus.BAD_REQUEST, "DEFENSE4004", "올바르지 않은 디펜스 대기 큐 순서 요청입니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
