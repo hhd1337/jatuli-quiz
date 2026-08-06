@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -51,6 +52,21 @@ public class FolderRestController {
     @GetMapping("/{folderId}/practice")
     public ApiResponse<PracticeResponse> getPracticeProblems(@PathVariable Long folderId) {
         return ApiResponse.onSuccess(folderQueryService.getPracticeProblems(folderId));
+    }
+
+    @Operation(
+            summary = "리프 폴더 이름 검색",
+            description = """
+                    폴더명에 검색어가 포함된 리프 폴더 목록을 조회합니다.
+                    같은 이름의 폴더를 구분할 수 있도록 각 결과에 상위 폴더 경로(fullPath)를 함께 반환합니다.
+                    검색어가 비어 있으면 빈 목록을 반환합니다.
+                    """
+    )
+    @GetMapping("/search")
+    public ApiResponse<FolderResponse.FolderSearchResponse> searchLeafFolders(
+            @RequestParam String query
+    ) {
+        return ApiResponse.onSuccess(folderQueryService.searchLeafFolders(query));
     }
 
     @Operation(

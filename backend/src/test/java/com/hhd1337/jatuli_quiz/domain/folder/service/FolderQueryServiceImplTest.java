@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.given;
 import com.hhd1337.jatuli_quiz.common.exception.code.status.ErrorStatus;
 import com.hhd1337.jatuli_quiz.common.exception.handler.FolderHandler;
 import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.FolderChildrenResponse;
+import com.hhd1337.jatuli_quiz.domain.folder.dto.FolderResponse.FolderSearchResponse;
 import com.hhd1337.jatuli_quiz.domain.folder.entity.Folder;
 import com.hhd1337.jatuli_quiz.domain.folder.repository.FolderRepository;
 import com.hhd1337.jatuli_quiz.domain.problem.repository.ProblemRepository;
@@ -102,5 +103,35 @@ class FolderQueryServiceImplTest {
 
         FolderHandler folderHandler = (FolderHandler) throwable;
         assertThat(folderHandler.getCode()).isEqualTo(ErrorStatus.FOLDER_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("검색어가 포함된 리프 폴더 목록과 상위 경로를 반환한다")
+    void searchLeafFolders_success() {
+        // given
+        given(folderRepository.searchLeafFoldersByName("기본"))
+                .willReturn(List.of(basicFolder));
+        given(problemRepository.countByFolder(basicFolder)).willReturn(40);
+
+        // when
+        FolderSearchResponse response = folderQueryService.searchLeafFolders("기본");
+
+        // then
+        assertThat(response.getFolders()).hasSize(1);
+
+        FolderSearchResponse.FolderSearchItem item = response.getFolders().get(0);
+        assertThat(item.getName()).isEqualTo("기본");
+        assertThat(item.getFullPath()).isEqualTo("/ROOT/자바/기본");
+        assertThat(item.getTotalProblemCount()).isEqualTo(40);
+    }
+
+    @Test
+    @DisplayName("검색어가 비어 있으면 빈 목록을 반환한다")
+    void searchLeafFolders_blankQuery_returnsEmptyList() {
+        // when
+        FolderSearchResponse response = folderQueryService.searchLeafFolders("   ");
+
+        // then
+        assertThat(response.getFolders()).isEmpty();
     }
 }
