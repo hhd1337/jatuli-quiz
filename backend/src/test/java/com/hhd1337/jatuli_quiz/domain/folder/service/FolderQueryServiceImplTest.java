@@ -39,10 +39,10 @@ class FolderQueryServiceImplTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        rootFolder = new Folder("/ROOT", 0, "ROOT", 0, null);
-        javaFolder = new Folder("/ROOT/자바", 1, "자바", 120, rootFolder);
-        basicFolder = new Folder("/ROOT/자바/기본", 2, "기본", 40, javaFolder);
-        oopFolder = new Folder("/ROOT/자바/객체지향", 2, "객체지향", 35, javaFolder);
+        rootFolder = new Folder("/ROOT", 0, "ROOT", 0, null, 0);
+        javaFolder = new Folder("/ROOT/자바", 1, "자바", 120, rootFolder, 0);
+        basicFolder = new Folder("/ROOT/자바/기본", 2, "기본", 40, javaFolder, 0);
+        oopFolder = new Folder("/ROOT/자바/객체지향", 2, "객체지향", 35, javaFolder, 1);
     }
 
     @Test
@@ -52,7 +52,7 @@ class FolderQueryServiceImplTest {
         Long folderId = 2L;
 
         given(folderRepository.findById(folderId)).willReturn(Optional.of(javaFolder));
-        given(folderRepository.findByParentFolder_FolderIdOrderByFolderIdAsc(folderId))
+        given(folderRepository.findByParentFolder_FolderIdOrderBySortOrderAscFolderIdAsc(folderId))
                 .willReturn(List.of(basicFolder, oopFolder));
 
         given(problemRepository.countByFolder(basicFolder)).willReturn(40);
