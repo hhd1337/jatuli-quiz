@@ -19,6 +19,7 @@ import {
 
 import { getFolderPractice } from "../../shared/api/folderApi";
 import {
+    deleteProblem,
     getBookmarkedPractice,
     getFolderPracticeCursor,
     submitProblemSubmission,
@@ -437,6 +438,12 @@ const editProblemIconButtonStyle = {
 
     cursor: "pointer",
     zIndex: 1,
+};
+
+const deleteProblemIconButtonStyle = {
+    ...editProblemIconButtonStyle,
+    right: 45,
+    color: "var(--color-danger, #fca5a5)",
 };
 
 const modalCardStyle = {
@@ -884,6 +891,11 @@ export default function QuizPlayPage() {
 
     const [problemEditError, setProblemEditError] = useState("");
 
+    const [problemDeleteSubmitting, setProblemDeleteSubmitting] =
+        useState(false);
+
+    const [problemDeleteError, setProblemDeleteError] = useState("");
+
     const [timeAdjustModal, setTimeAdjustModal] = useState({
         open: false,
         elapsedSeconds: 0,
@@ -1148,6 +1160,7 @@ export default function QuizPlayPage() {
             setProblemEditError("");
             setIsProblemEditing(false);
             setProblemEditSubmitting(false);
+            setProblemDeleteError("");
 
             stopAnswerSpeech();
         }
@@ -1497,6 +1510,7 @@ export default function QuizPlayPage() {
         if (
             isProblemEditing ||
             problemEditSubmitting ||
+            problemDeleteSubmitting ||
             nextSplashOpen
         ) {
             return;
@@ -1644,6 +1658,84 @@ export default function QuizPlayPage() {
         }
 
         await saveProblemEdit();
+    };
+
+    const handleDeleteProblem = async () => {
+        if (
+            problemDeleteSubmitting ||
+            problemEditSubmitting ||
+            isProblemEditing ||
+            submitting ||
+            nextSplashOpen
+        ) {
+            return;
+        }
+
+        const problemToDelete = problems[currentIndex];
+
+        if (!problemToDelete?.problemId) {
+            setProblemDeleteError("문제 ID가 없어 삭제할 수 없습니다.");
+            return;
+        }
+
+        const confirmed = window.confirm(
+            "이 문제를 삭제할까요?\n삭제하면 되돌릴 수 없습니다."
+        );
+
+        if (!confirmed) return;
+
+        const deletedProblemId = problemToDelete.problemId;
+
+        try {
+            setProblemDeleteSubmitting(true);
+            setProblemDeleteError("");
+
+            await deleteProblem(deletedProblemId);
+
+            setScratchpadDrafts((prev) => {
+                const next = { ...prev };
+                delete next[String(deletedProblemId)];
+                return next;
+            });
+
+            setSubmittedProblemIds((prev) => {
+                if (!prev.has(deletedProblemId)) {
+                    return prev;
+                }
+
+                const next = new Set(prev);
+                next.delete(deletedProblemId);
+                return next;
+            });
+
+            setShowAnswer(false);
+
+            setLocalProblems((prev) => {
+                const nextProblems = prev.filter(
+                    (p) => p.problemId !== deletedProblemId
+                );
+
+                if (
+                    nextProblems.length > 0 &&
+                    currentIndex >= nextProblems.length
+                ) {
+                    setCurrentIndex(nextProblems.length - 1);
+                }
+
+                return nextProblems;
+            });
+        } catch (err) {
+            console.error("문제 삭제 실패:", err);
+
+            const serverMessage = err?.response?.data?.message;
+
+            setProblemDeleteError(
+                serverMessage ||
+                "문제를 삭제하지 못했습니다. 다시 시도해주세요."
+            );
+        } finally {
+            setProblemDeleteSubmitting(false);
+        }
     };
 
     const submitCurrentProblemAndGoNext = async (elapsedSeconds) => {
@@ -1980,17 +2072,20 @@ export default function QuizPlayPage() {
         currentIndex === 0 ||
         submitting ||
         nextSplashOpen ||
-        isProblemEditLocked;
+        isProblemEditLocked ||
+        problemDeleteSubmitting;
 
     const isSkipNextDisabled =
         submitting ||
         nextSplashOpen ||
-        isProblemEditLocked;
+        isProblemEditLocked ||
+        problemDeleteSubmitting;
 
     const isSubmitNextDisabled =
         submitting ||
         nextSplashOpen ||
-        isProblemEditLocked;
+        isProblemEditLocked ||
+        problemDeleteSubmitting;
 
     return (
         <div
@@ -2286,6 +2381,56 @@ export default function QuizPlayPage() {
                                     <path d="m15 5 3 3" />
                                 </svg>
                             </button>
+
+                            <button
+                                type="button"
+                                data-prevent-answer-toggle
+                                aria-label="문제 삭제"
+                                title="문제 삭제"
+                                disabled={problemDeleteSubmitting}
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleDeleteProblem();
+                                }}
+                                style={{
+                                    ...deleteProblemIconButtonStyle,
+                                    opacity: problemDeleteSubmitting ? 0.5 : 1,
+                                    cursor: problemDeleteSubmitting
+                                        ? "not-allowed"
+                                        : "pointer",
+                                }}
+                            >
+                                <svg
+                                    width="17"
+                                    height="17"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden="true"
+                                    style={{ transform: "translateX(10px)" }}
+                                >
+                                    <path d="M3 6h18" />
+                                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                    <path d="M10 11v6" />
+                                    <path d="M14 11v6" />
+                                </svg>
+                            </button>
+
+                            {problemDeleteError && (
+                                <p
+                                    style={{
+                                        color: "var(--color-danger, #fca5a5)",
+                                        fontSize: 13,
+                                        margin: "0 0 12px",
+                                    }}
+                                >
+                                    {problemDeleteError}
+                                </p>
+                            )}
 
                             <div style={{ marginBottom: 20 }}>
                                 <div

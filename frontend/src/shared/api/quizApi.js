@@ -115,6 +115,23 @@ export async function toggleProblemBookmark(problemId) {
     };
 }
 
+export async function deleteProblem(problemId) {
+    if (!problemId) {
+        throw new Error("problemId is required");
+    }
+
+    const response = await apiClient.delete(
+        `/api/v1/problems/${problemId}`
+    );
+
+    const result = response.data.result ?? {};
+
+    return {
+        problemId: result.problemId ?? problemId,
+        folderId: result.folderId ?? null,
+    };
+}
+
 export async function getFolderProblemsForCopy(folderId) {
     const response = await apiClient.get(
         `/api/v1/problems/folders/${folderId}/copy`
