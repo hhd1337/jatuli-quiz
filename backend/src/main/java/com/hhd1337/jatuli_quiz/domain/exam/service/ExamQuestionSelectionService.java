@@ -1,5 +1,6 @@
 package com.hhd1337.jatuli_quiz.domain.exam.service;
 
+import com.hhd1337.jatuli_quiz.domain.dailystat.service.DailyStatCommandService;
 import com.hhd1337.jatuli_quiz.domain.exam.dto.ExamAnswerRequest;
 import com.hhd1337.jatuli_quiz.domain.exam.dto.ExamAnswerResponse;
 import com.hhd1337.jatuli_quiz.domain.exam.dto.ExamAnswerResponse.ExamAnswerProblemResponse;
@@ -39,6 +40,7 @@ public class ExamQuestionSelectionService {
     private final FolderRepository folderRepository;
     private final ProblemRepository problemRepository;
     private final ProblemSubmissionRepository problemSubmissionRepository;
+    private final DailyStatCommandService dailyStatCommandService;
 
     /**
      * 사용자가 선택한 리프 폴더별로 시험 문제를 출제한다.
@@ -100,6 +102,9 @@ public class ExamQuestionSelectionService {
      * 시험에 포함된 모든 문제를 ProblemSubmission으로 저장한다.
      * <p>
      * 아직 AI 채점이나 사용자 자기평가를 하지 않으므로 isCorrect는 null로 저장한다.
+     * <p>
+     * 문제별로 solvedCount 증가와 함께 당일 DailyStat도 함께 갱신하여,
+     * 폴더별 문제풀이와 동일하게 일일 통계에 반영되도록 한다.
      */
     @Transactional
     public ExamAnswerResponse submitExam(
@@ -151,6 +156,7 @@ public class ExamQuestionSelectionService {
                     elapsedSecondsPerProblem.get(index);
 
             problem.increaseSolvedCount();
+            dailyStatCommandService.updateDailyStat(problemElapsedSeconds);
 
             submissions.add(
                     new ProblemSubmission(
