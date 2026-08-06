@@ -61,7 +61,10 @@ public class ExamController {
                     
                     전달받은 모든 문제에 대해 ProblemSubmission을 생성하고,
                     각 문제의 solvedCount를 1씩 증가시킵니다.
-                    
+
+                    동일한 문제 수만큼 당일 DailyStat의 solvedCount도 함께
+                    증가시켜, 폴더별 문제풀이와 동일하게 일일 통계에 반영됩니다.
+
                     아직 정답 여부를 채점하지 않으므로 ProblemSubmission의
                     isCorrect 값은 null로 저장합니다.
                     

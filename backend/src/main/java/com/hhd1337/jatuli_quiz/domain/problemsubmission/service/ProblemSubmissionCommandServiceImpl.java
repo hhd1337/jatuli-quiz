@@ -3,7 +3,7 @@ package com.hhd1337.jatuli_quiz.domain.problemsubmission.service;
 import com.hhd1337.jatuli_quiz.common.exception.GeneralException;
 import com.hhd1337.jatuli_quiz.common.exception.code.status.ErrorStatus;
 import com.hhd1337.jatuli_quiz.domain.dailystat.entity.DailyStat;
-import com.hhd1337.jatuli_quiz.domain.dailystat.repository.DailyStatRepository;
+import com.hhd1337.jatuli_quiz.domain.dailystat.service.DailyStatCommandService;
 import com.hhd1337.jatuli_quiz.domain.practice.service.FolderPracticeCursorService;
 import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
 import com.hhd1337.jatuli_quiz.domain.problem.repository.ProblemRepository;
@@ -14,10 +14,8 @@ import com.hhd1337.jatuli_quiz.domain.problemsubmission.entity.ProblemSubmission
 import com.hhd1337.jatuli_quiz.domain.problemsubmission.repository.ProblemSubmissionRepository;
 import com.hhd1337.jatuli_quiz.domain.progress.entity.LearningProgress;
 import com.hhd1337.jatuli_quiz.domain.progress.repository.LearningProgressRepository;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +29,7 @@ public class ProblemSubmissionCommandServiceImpl implements ProblemSubmissionCom
 
     private final ProblemRepository problemRepository;
     private final ProblemSubmissionRepository problemSubmissionRepository;
-    private final DailyStatRepository dailyStatRepository;
+    private final DailyStatCommandService dailyStatCommandService;
     private final LearningProgressRepository learningProgressRepository;
     private final FolderPracticeCursorService folderPracticeCursorService;
 
@@ -69,7 +67,7 @@ public class ProblemSubmissionCommandServiceImpl implements ProblemSubmissionCom
         );
         problemSubmissionRepository.save(submission);
 
-        DailyStat dailyStat = updateDailyStat(elapsedSeconds);
+        DailyStat dailyStat = dailyStatCommandService.updateDailyStat(elapsedSeconds);
 
         if (request.isFolderPracticeMode()) {
             updateFolderPracticeCursor(request);
@@ -123,51 +121,5 @@ public class ProblemSubmissionCommandServiceImpl implements ProblemSubmissionCom
         if (practicedBookmarkedProblemCount >= totalBookmarkedProblemCount) {
             learningProgress.completeCurrentBookmarkedRound();
         }
-    }
-
-    private DailyStat updateDailyStat(int elapsedSeconds) {
-        LocalDate today = LocalDate.now(SERVICE_ZONE);
-
-        Optional<DailyStat> todayStatOptional = dailyStatRepository.findByStatDate(today);
-
-        if (todayStatOptional.isPresent()) {
-            DailyStat todayStat = todayStatOptional.get();
-            todayStat.applySubmission(elapsedSeconds);
-            return todayStat;
-        }
-
-        Optional<DailyStat> lastStatOptional =
-                dailyStatRepository.findTopByStatDateLessThanOrderByStatDateDesc(today);
-
-        long previousAccumulatedFocusSeconds = lastStatOptional
-                .map(DailyStat::getAccumulatedFocusSeconds)
-                .orElse(0L);
-
-        int daysInARow = calculateDaysInARow(lastStatOptional, today);
-
-        DailyStat newDailyStat = DailyStat.createFirstSubmissionOfDay(
-                today,
-                elapsedSeconds,
-                previousAccumulatedFocusSeconds,
-                daysInARow
-        );
-
-        return dailyStatRepository.save(newDailyStat);
-    }
-
-    private int calculateDaysInARow(Optional<DailyStat> lastStatOptional, LocalDate today) {
-        if (lastStatOptional.isEmpty()) {
-            return 1;
-        }
-
-        DailyStat lastStat = lastStatOptional.get();
-        LocalDate yesterday = today.minusDays(1);
-
-        if (yesterday.equals(lastStat.getStatDate())) {
-            Integer previousDaysInARow = lastStat.getDaysInARow();
-            return (previousDaysInARow == null ? 0 : previousDaysInARow) + 1;
-        }
-
-        return 1;
     }
 }
