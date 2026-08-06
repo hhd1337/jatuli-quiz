@@ -6,22 +6,27 @@ import com.hhd1337.jatuli_quiz.domain.folder.entity.Folder;
 import com.hhd1337.jatuli_quiz.domain.folder.repository.FolderRepository;
 import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeRequest;
 import com.hhd1337.jatuli_quiz.domain.practice.dto.PracticeResponse;
+import com.hhd1337.jatuli_quiz.domain.practice.entity.FolderPracticeCursor;
 import com.hhd1337.jatuli_quiz.domain.practice.entity.PracticeCursor;
 import com.hhd1337.jatuli_quiz.domain.practice.entity.PracticeCursorType;
+import com.hhd1337.jatuli_quiz.domain.practice.repository.FolderPracticeCursorRepository;
 import com.hhd1337.jatuli_quiz.domain.practice.repository.PracticeCursorRepository;
 import com.hhd1337.jatuli_quiz.domain.problem.converter.ProblemConverter;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ParsedProblemContent;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemBookmarkResponse;
+import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemDeleteResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportRequest;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemImportResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemUpdateRequest;
 import com.hhd1337.jatuli_quiz.domain.problem.dto.ProblemUpdateResponse;
 import com.hhd1337.jatuli_quiz.domain.problem.entity.Problem;
 import com.hhd1337.jatuli_quiz.domain.problem.repository.ProblemRepository;
+import com.hhd1337.jatuli_quiz.domain.problemsubmission.repository.ProblemSubmissionRepository;
 import com.hhd1337.jatuli_quiz.domain.progress.entity.LearningProgress;
 import com.hhd1337.jatuli_quiz.domain.progress.repository.LearningProgressRepository;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -39,6 +44,8 @@ public class ProblemCommandServiceImpl implements ProblemCommandService {
     private final ProblemTextParser problemTextParser;
     private final PracticeCursorRepository practiceCursorRepository;
     private final LearningProgressRepository learningProgressRepository;
+    private final ProblemSubmissionRepository problemSubmissionRepository;
+    private final FolderPracticeCursorRepository folderPracticeCursorRepository;
 
     @Override
     public ProblemBookmarkResponse.ToggleBookmarkResponse toggleBookmark(Long problemId) {
@@ -48,6 +55,71 @@ public class ProblemCommandServiceImpl implements ProblemCommandService {
         problem.toggleBookmark();
 
         return ProblemConverter.toToggleBookmarkResponse(problem);
+    }
+
+    @Override
+    public ProblemDeleteResponse.DeleteProblemResponse deleteProblem(Long problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.PROBLEM_NOT_FOUND));
+
+        Folder folder = problem.getFolder();
+
+        List<Problem> problemsBeforeDelete =
+                problemRepository.findByFolder_FolderIdOrderByProblemIdAsc(folder.getFolderId());
+
+        problemSubmissionRepository.deleteAllByProblem(problem);
+        problemRepository.delete(problem);
+
+        folder.decreaseProblemCount(1);
+
+        reassignPracticeCursorIfNeeded(folder, problemId, problemsBeforeDelete);
+
+        return ProblemConverter.toDeleteProblemResponse(problemId, folder.getFolderId());
+    }
+
+    private void reassignPracticeCursorIfNeeded(
+            Folder folder,
+            Long deletedProblemId,
+            List<Problem> problemsBeforeDelete
+    ) {
+        Optional<FolderPracticeCursor> cursorOptional =
+                folderPracticeCursorRepository.findByFolder_FolderId(folder.getFolderId());
+
+        if (cursorOptional.isEmpty()) {
+            return;
+        }
+
+        FolderPracticeCursor cursor = cursorOptional.get();
+
+        if (cursor.getNextProblemId() == null
+                || !cursor.getNextProblemId().equals(deletedProblemId)) {
+            return;
+        }
+
+        int deletedIndex = findProblemIndex(problemsBeforeDelete, deletedProblemId);
+
+        List<Problem> remainingProblems = problemsBeforeDelete.stream()
+                .filter(problem -> !problem.getProblemId().equals(deletedProblemId))
+                .toList();
+
+        Long nextProblemId = null;
+
+        if (!remainingProblems.isEmpty()) {
+            int nextIndex = Math.min(deletedIndex, remainingProblems.size() - 1);
+            nextProblemId = remainingProblems.get(nextIndex).getProblemId();
+        }
+
+        cursor.reassignNextProblemId(nextProblemId);
+    }
+
+    private int findProblemIndex(List<Problem> problems, Long problemId) {
+        for (int i = 0; i < problems.size(); i++) {
+            if (problems.get(i).getProblemId().equals(problemId)) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     @Override

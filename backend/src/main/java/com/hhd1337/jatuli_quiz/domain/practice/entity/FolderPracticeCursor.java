@@ -71,4 +71,12 @@ public class FolderPracticeCursor {
         this.lastSubmittedProblemId = null;
         this.nextProblemId = firstProblemId;
     }
+
+    /**
+     * 문제 삭제 등으로 nextProblemId가 더 이상 유효하지 않을 때문
+     * lastSubmittedProblemId는 그대로 둔 채 다음 문제 포인터만 재조정한다.
+     */
+    public void reassignNextProblemId(Long nextProblemId) {
+        this.nextProblemId = nextProblemId;
+    }
 }
